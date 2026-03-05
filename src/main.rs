@@ -1359,6 +1359,29 @@ enum Commands {
         #[command(subcommand)]
         action: OrgActions,
     },
+    /// Manage seat assignments for Datadog products
+    Seats {
+        #[command(subcommand)]
+        action: SeatsActions,
+    },
+    /// Manage change requests
+    #[command(name = "change-requests")]
+    ChangeManagement {
+        #[command(subcommand)]
+        action: ChangeManagementActions,
+    },
+    /// Manage AWS cloud authentication persona mappings
+    #[command(name = "cloud-auth")]
+    CloudAuth {
+        #[command(subcommand)]
+        action: CloudAuthActions,
+    },
+    /// Manage Google Chat integration
+    #[command(name = "google-chat")]
+    GoogleChat {
+        #[command(subcommand)]
+        action: GoogleChatActions,
+    },
     /// Send product analytics events
     ///
     /// Send server-side product analytics events to Datadog.
@@ -2597,6 +2620,154 @@ enum SecuritySuppressionActions {
     Validate {
         #[arg(long, help = "JSON file with request body (required)")]
         file: String,
+    },
+}
+
+// ---- Seats ----
+#[derive(Subcommand)]
+enum SeatsActions {
+    /// Manage seat assignments
+    Users {
+        #[command(subcommand)]
+        action: SeatsUserActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum SeatsUserActions {
+    /// List users with seats
+    List {
+        #[arg(long, help = "Product (e.g. incident_response)")]
+        product: String,
+        #[arg(long, default_value_t = 100, help = "Page limit")]
+        limit: i32,
+    },
+    /// Assign seats to users
+    Assign {
+        #[arg(long, help = "JSON file with request body (required)")]
+        file: String,
+    },
+    /// Unassign seats from users
+    Unassign {
+        #[arg(long, help = "JSON file with request body (required)")]
+        file: String,
+    },
+}
+
+// ---- Change Management ----
+#[derive(Subcommand)]
+enum ChangeManagementActions {
+    /// Create a change request
+    Create {
+        #[arg(long, help = "JSON file with request body (required)")]
+        file: String,
+    },
+    /// Get a change request
+    Get { change_request_id: String },
+    /// Update a change request
+    Update {
+        change_request_id: String,
+        #[arg(long, help = "JSON file with request body (required)")]
+        file: String,
+    },
+    /// Create a branch for a change request
+    #[command(name = "create-branch")]
+    CreateBranch {
+        change_request_id: String,
+        #[arg(long, help = "JSON file with request body (required)")]
+        file: String,
+    },
+    /// Manage change request decisions
+    Decisions {
+        #[command(subcommand)]
+        action: ChangeRequestDecisionActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum ChangeRequestDecisionActions {
+    /// Delete a decision
+    Delete {
+        change_request_id: String,
+        decision_id: String,
+    },
+    /// Update a decision
+    Update {
+        change_request_id: String,
+        decision_id: String,
+        #[arg(long, help = "JSON file with request body (required)")]
+        file: String,
+    },
+}
+
+// ---- Cloud Authentication ----
+#[derive(Subcommand)]
+enum CloudAuthActions {
+    /// Manage AWS persona mappings
+    #[command(name = "persona-mappings")]
+    PersonaMappings {
+        #[command(subcommand)]
+        action: CloudAuthPersonaMappingActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum CloudAuthPersonaMappingActions {
+    /// List persona mappings
+    List,
+    /// Get a persona mapping
+    Get { mapping_id: String },
+    /// Create a persona mapping
+    Create {
+        #[arg(long, help = "JSON file with request body (required)")]
+        file: String,
+    },
+    /// Delete a persona mapping
+    Delete { mapping_id: String },
+}
+
+// ---- Google Chat Integration ----
+#[derive(Subcommand)]
+enum GoogleChatActions {
+    /// Manage organization handles
+    Handles {
+        #[command(subcommand)]
+        action: GoogleChatHandleActions,
+    },
+    /// Get a space by display name
+    #[command(name = "space-get")]
+    SpaceGet {
+        domain_name: String,
+        space_display_name: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum GoogleChatHandleActions {
+    /// List organization handles
+    List { org_id: String },
+    /// Get an organization handle
+    Get {
+        org_id: String,
+        handle_id: String,
+    },
+    /// Create an organization handle
+    Create {
+        org_id: String,
+        #[arg(long, help = "JSON file with request body (required)")]
+        file: String,
+    },
+    /// Update an organization handle
+    Update {
+        org_id: String,
+        handle_id: String,
+        #[arg(long, help = "JSON file with request body (required)")]
+        file: String,
+    },
+    /// Delete an organization handle
+    Delete {
+        org_id: String,
+        handle_id: String,
     },
 }
 
@@ -5617,6 +5788,129 @@ async fn main_inner() -> anyhow::Result<()> {
             match action {
                 OrgActions::List => commands::organizations::list(&cfg).await?,
                 OrgActions::Get => commands::organizations::get(&cfg).await?,
+            }
+        }
+        // --- Seats ---
+        Commands::Seats { action } => {
+            cfg.validate_auth()?;
+            match action {
+                SeatsActions::Users { action } => match action {
+                    SeatsUserActions::List { product, limit } => {
+                        commands::seats::users_list(&cfg, &product, limit).await?;
+                    }
+                    SeatsUserActions::Assign { file } => {
+                        commands::seats::users_assign(&cfg, &file).await?;
+                    }
+                    SeatsUserActions::Unassign { file } => {
+                        commands::seats::users_unassign(&cfg, &file).await?;
+                    }
+                },
+            }
+        }
+        // --- Change Management ---
+        Commands::ChangeManagement { action } => {
+            cfg.validate_auth()?;
+            match action {
+                ChangeManagementActions::Create { file } => {
+                    commands::change_management::create(&cfg, &file).await?;
+                }
+                ChangeManagementActions::Get { change_request_id } => {
+                    commands::change_management::get(&cfg, &change_request_id).await?;
+                }
+                ChangeManagementActions::Update {
+                    change_request_id,
+                    file,
+                } => {
+                    commands::change_management::update(&cfg, &change_request_id, &file).await?;
+                }
+                ChangeManagementActions::CreateBranch {
+                    change_request_id,
+                    file,
+                } => {
+                    commands::change_management::create_branch(&cfg, &change_request_id, &file)
+                        .await?;
+                }
+                ChangeManagementActions::Decisions { action } => match action {
+                    ChangeRequestDecisionActions::Delete {
+                        change_request_id,
+                        decision_id,
+                    } => {
+                        commands::change_management::delete_decision(
+                            &cfg,
+                            &change_request_id,
+                            &decision_id,
+                        )
+                        .await?;
+                    }
+                    ChangeRequestDecisionActions::Update {
+                        change_request_id,
+                        decision_id,
+                        file,
+                    } => {
+                        commands::change_management::update_decision(
+                            &cfg,
+                            &change_request_id,
+                            &decision_id,
+                            &file,
+                        )
+                        .await?;
+                    }
+                },
+            }
+        }
+        // --- Cloud Auth ---
+        Commands::CloudAuth { action } => {
+            cfg.validate_auth()?;
+            match action {
+                CloudAuthActions::PersonaMappings { action } => match action {
+                    CloudAuthPersonaMappingActions::List => {
+                        commands::cloud_auth::persona_mappings_list(&cfg).await?;
+                    }
+                    CloudAuthPersonaMappingActions::Get { mapping_id } => {
+                        commands::cloud_auth::persona_mappings_get(&cfg, &mapping_id).await?;
+                    }
+                    CloudAuthPersonaMappingActions::Create { file } => {
+                        commands::cloud_auth::persona_mappings_create(&cfg, &file).await?;
+                    }
+                    CloudAuthPersonaMappingActions::Delete { mapping_id } => {
+                        commands::cloud_auth::persona_mappings_delete(&cfg, &mapping_id).await?;
+                    }
+                },
+            }
+        }
+        // --- Google Chat ---
+        Commands::GoogleChat { action } => {
+            cfg.validate_auth()?;
+            match action {
+                GoogleChatActions::Handles { action } => match action {
+                    GoogleChatHandleActions::List { org_id } => {
+                        commands::google_chat::handles_list(&cfg, &org_id).await?;
+                    }
+                    GoogleChatHandleActions::Get { org_id, handle_id } => {
+                        commands::google_chat::handles_get(&cfg, &org_id, &handle_id).await?;
+                    }
+                    GoogleChatHandleActions::Create { org_id, file } => {
+                        commands::google_chat::handles_create(&cfg, &org_id, &file).await?;
+                    }
+                    GoogleChatHandleActions::Update {
+                        org_id,
+                        handle_id,
+                        file,
+                    } => {
+                        commands::google_chat::handles_update(&cfg, &org_id, &handle_id, &file)
+                            .await?;
+                    }
+                    GoogleChatHandleActions::Delete { org_id, handle_id } => {
+                        commands::google_chat::handles_delete(&cfg, &org_id, &handle_id).await?;
+                    }
+                },
+                GoogleChatActions::SpaceGet {
+                    domain_name,
+                    space_display_name,
+                } => {
+                    commands::google_chat::space_get(&cfg, &domain_name, &space_display_name)
+                        .await?;
+                }
             }
         }
         // --- Cloud ---
