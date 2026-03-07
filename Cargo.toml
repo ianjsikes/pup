@@ -35,7 +35,6 @@ native = [
     "dep:tokio-tungstenite",
     "dep:yamux",
     "dep:russh",
-    "dep:russh-keys",
     "dep:ssh-key",
     "dep:futures",
     "dep:tokio-util",
@@ -109,10 +108,9 @@ aes-gcm = { version = "0.10", optional = true }
 # ---- Native-only dependencies ----
 
 # Synthetics tunnel
-tokio-tungstenite = { version = "0.20", features = ["native-tls"], optional = true }
+tokio-tungstenite = { version = "0.28", features = ["native-tls"], optional = true }
 yamux = { version = "0.13", optional = true }
-russh = { version = "0.44", optional = true }
-russh-keys = { version = "0.44", optional = true }
+russh = { version = "0.57", optional = true }
 ssh-key = { version = "0.6", features = ["p256", "std"], optional = true }
 futures = { version = "0.3", optional = true }
 tokio-util = { version = "0.7", features = ["compat", "io"], optional = true }

@@ -1,9 +1,8 @@
 use anyhow::{anyhow, Result};
-use async_trait::async_trait;
 use futures::{SinkExt, StreamExt};
+use russh::keys::{decode_secret_key, PublicKey};
 use russh::server::{Auth, Handler, Msg, Session};
 use russh::ChannelId;
-use russh_keys::key::PublicKey;
 use serde::{Deserialize, Serialize};
 use ssh_key::{rand_core::OsRng, Algorithm, EcdsaCurve, LineEnding, PrivateKey as SshKey};
 use std::collections::HashMap;
@@ -37,7 +36,7 @@ impl Tunnel {
         let host_pem = host_ssh_key
             .to_openssh(LineEnding::LF)
             .map_err(|e| anyhow!("failed to encode host key: {e}"))?;
-        let host_key = russh_keys::decode_secret_key(&host_pem, None)
+        let host_key = decode_secret_key(&host_pem, None)
             .map_err(|e| anyhow!("failed to decode host key: {e}"))?;
 
         let client_ssh_key = SshKey::random(&mut rng, algo)
@@ -46,9 +45,9 @@ impl Tunnel {
             .to_openssh(LineEnding::LF)
             .map_err(|e| anyhow!("failed to encode client key: {e}"))?
             .to_string();
-        let client_key = russh_keys::decode_secret_key(&private_key_str, None)
+        let client_key = decode_secret_key(&private_key_str, None)
             .map_err(|e| anyhow!("failed to decode client key: {e}"))?;
-        let client_public = client_key.clone_public_key()?;
+        let client_public = client_key.public_key().clone();
 
         // Normalize: wss://host?... → wss://host/?... (tungstenite needs a path)
         let normalized_url = if let Some(idx) = url.find('?') {
@@ -86,8 +85,8 @@ impl Tunnel {
             .ok_or_else(|| anyhow!("WebSocket closed before receiving connection info"))??;
 
         let first_bytes = match first_msg {
-            Message::Binary(b) => b,
-            Message::Text(t) => t.into_bytes(),
+            Message::Binary(b) => b.to_vec(),
+            Message::Text(t) => t.as_bytes().to_vec(),
             other => anyhow::bail!("unexpected first WebSocket message: {other:?}"),
         };
 
@@ -133,7 +132,7 @@ impl Tunnel {
                     Ok(0) | Err(_) => break,
                     Ok(n) => {
                         if ws_write
-                            .send(Message::Binary(buf[..n].to_vec()))
+                            .send(Message::Binary(buf[..n].to_vec().into()))
                             .await
                             .is_err()
                         {
@@ -213,7 +212,6 @@ struct SshHandler {
     tcp_writers: HashMap<ChannelId, tokio::net::tcp::OwnedWriteHalf>,
 }
 
-#[async_trait]
 impl Handler for SshHandler {
     type Error = anyhow::Error;
 
@@ -225,6 +223,7 @@ impl Handler for SshHandler {
         if !self.test_ids.contains(&user.to_string()) {
             return Ok(Auth::Reject {
                 proceed_with_methods: None,
+                partial_success: false,
             });
         }
         if public_key == &self.client_public_key {
@@ -232,6 +231,7 @@ impl Handler for SshHandler {
         } else {
             Ok(Auth::Reject {
                 proceed_with_methods: None,
+                partial_success: false,
             })
         }
     }
