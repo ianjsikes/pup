@@ -192,11 +192,17 @@ pub fn status(cfg: &Config) -> Result<()> {
                     .map(|dt| dt.with_timezone(&chrono::Local).to_rfc3339())
                     .unwrap_or_default();
 
+                let scopes: Vec<&str> = tokens.scope
+                    .split_whitespace()
+                    .filter(|s| !s.is_empty())
+                    .collect();
+
                 let json = serde_json::json!({
                     "authenticated": true,
                     "expires_at": expires_at,
                     "has_refresh": !tokens.refresh_token.is_empty(),
                     "org": org,
+                    "scopes": scopes,
                     "site": site,
                     "status": status,
                     "token_type": tokens.token_type,
@@ -297,11 +303,52 @@ pub async fn refresh(_cfg: &Config) -> Result<()> {
     )
 }
 
-/// List all stored org sessions from the session registry.
+/// List all stored org sessions from the session registry, enriched with token status.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn list(cfg: &Config) -> Result<()> {
     let sessions = storage::list_sessions()?;
-    crate::formatter::output(cfg, &sessions)
+
+    let enriched: Vec<serde_json::Value> = sessions
+        .into_iter()
+        .map(|s| {
+            let tokens = with_storage(|store| store.load_tokens(&s.site, s.org.as_deref()))
+                .ok()
+                .flatten();
+
+            match tokens {
+                Some(t) => {
+                    let expires_at_ts = t.issued_at + t.expires_in;
+                    let is_expired = t.is_expired();
+                    let status = if is_expired { "expired" } else { "valid" };
+                    let expires_at = chrono::DateTime::from_timestamp(expires_at_ts, 0)
+                        .map(|dt| dt.with_timezone(&chrono::Local).to_rfc3339())
+                        .unwrap_or_default();
+                    let scopes: Vec<&str> = t.scope
+                        .split_whitespace()
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    serde_json::json!({
+                        "expires_at": expires_at,
+                        "has_refresh": !t.refresh_token.is_empty(),
+                        "org": s.org,
+                        "scopes": scopes,
+                        "site": s.site,
+                        "status": status,
+                    })
+                }
+                None => serde_json::json!({
+                    "expires_at": null,
+                    "has_refresh": false,
+                    "org": s.org,
+                    "scopes": [],
+                    "site": s.site,
+                    "status": "no token",
+                }),
+            }
+        })
+        .collect();
+
+    crate::formatter::output(cfg, &enriched)
 }
 
 #[cfg(target_arch = "wasm32")]
