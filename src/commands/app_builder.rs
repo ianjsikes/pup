@@ -33,9 +33,9 @@ pub async fn list(cfg: &Config, query: Option<&str>) -> Result<()> {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn list(cfg: &Config, query: Option<&str>) -> Result<()> {
-    let mut qs: Vec<(&str, &str)> = vec![];
+    let mut qs: Vec<(&str, String)> = vec![];
     if let Some(q) = query {
-        qs.push(("filter[query]", q));
+        qs.push(("filter[query]", q.to_string()));
     }
     let data = crate::api::get(cfg, "/api/v2/app-builder/apps", &qs).await?;
     crate::formatter::output(cfg, &data)
