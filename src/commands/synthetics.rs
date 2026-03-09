@@ -210,22 +210,30 @@ pub async fn tests_run(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn tests_list(cfg: &Config) -> Result<()> {
+pub async fn tests_list(cfg: &Config, page_size: i64, page_number: i64) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
         Some(c) => SyntheticsAPI::with_client_and_config(dd_cfg, c),
         None => SyntheticsAPI::with_config(dd_cfg),
     };
     let resp = api
-        .list_tests(ListTestsOptionalParams::default())
+        .list_tests(
+            ListTestsOptionalParams::default()
+                .page_size(page_size)
+                .page_number(page_number),
+        )
         .await
         .map_err(|e| anyhow::anyhow!("failed to list tests: {e:?}"))?;
     formatter::output(cfg, &resp)
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn tests_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v1/synthetics/tests", &[]).await?;
+pub async fn tests_list(cfg: &Config, page_size: i64, page_number: i64) -> Result<()> {
+    let query = [
+        ("page_size", page_size.to_string()),
+        ("page_number", page_number.to_string()),
+    ];
+    let data = crate::api::get(cfg, "/api/v1/synthetics/tests", &query).await?;
     crate::formatter::output(cfg, &data)
 }
 
@@ -254,8 +262,11 @@ pub async fn tests_get(cfg: &Config, public_id: &str) -> Result<()> {
 pub async fn tests_search(
     cfg: &Config,
     text: Option<String>,
+    facets_only: bool,
+    include_full_config: bool,
     count: i64,
     start: i64,
+    sort: Option<String>,
 ) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -267,11 +278,20 @@ pub async fn tests_search(
     if let Some(t) = text {
         params = params.text(t);
     }
+    if facets_only {
+        params = params.facets_only(true);
+    }
+    if include_full_config {
+        params = params.include_full_config(true);
+    }
     if count != 50 {
         params = params.count(count);
     }
     if start != 0 {
         params = params.start(start);
+    }
+    if let Some(s) = sort {
+        params = params.sort(s);
     }
 
     let resp = api
@@ -285,18 +305,30 @@ pub async fn tests_search(
 pub async fn tests_search(
     cfg: &Config,
     text: Option<String>,
+    facets_only: bool,
+    include_full_config: bool,
     count: i64,
     start: i64,
+    sort: Option<String>,
 ) -> Result<()> {
     let mut query: Vec<(&str, String)> = Vec::new();
     if let Some(t) = text {
         query.push(("text", t));
+    }
+    if facets_only {
+        query.push(("facets_only", "true".to_string()));
+    }
+    if include_full_config {
+        query.push(("include_full_config", "true".to_string()));
     }
     if count != 50 {
         query.push(("count", count.to_string()));
     }
     if start != 0 {
         query.push(("start", start.to_string()));
+    }
+    if let Some(s) = sort {
+        query.push(("sort", s));
     }
     let data = crate::api::get(cfg, "/api/v1/synthetics/tests/search", &query).await?;
     crate::formatter::output(cfg, &data)

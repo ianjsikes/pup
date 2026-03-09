@@ -1516,7 +1516,7 @@ async fn test_synthetics_tests_list() {
     let mut s = mockito::Server::new_async().await;
     let cfg = test_config(&s.url());
     mock_all(&mut s, r#"{"tests": []}"#).await;
-    let _ = crate::commands::synthetics::tests_list(&cfg).await;
+    let _ = crate::commands::synthetics::tests_list(&cfg, 10, 0).await;
     cleanup_env();
 }
 #[tokio::test]
