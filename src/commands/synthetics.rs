@@ -47,6 +47,10 @@ fn build_auth_headers(cfg: &Config) -> anyhow::Result<reqwest::header::HeaderMap
         HeaderName::from_static("dd-application-key"),
         HeaderValue::from_str(app_key)?,
     );
+    headers.insert(
+        reqwest::header::USER_AGENT,
+        HeaderValue::from_str(&crate::useragent::get())?,
+    );
     Ok(headers)
 }
 
