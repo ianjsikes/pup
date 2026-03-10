@@ -23,11 +23,24 @@ before:
     - sh -c 'tar czf wasm-out/pup_browser_wasm.tar.gz -C pkg .'
 
 builds:
-  - builder: rust
+  # Linux targets: use cargo-zigbuild (zig handles glibc cross-compilation)
+  - id: linux
+    builder: rust
     binary: pup
     targets:
       - x86_64-unknown-linux-gnu
       - aarch64-unknown-linux-gnu
+    flags:
+      - --release
+      - --features=vendored-openssl
+
+  # macOS targets: use native cargo + Apple clang (avoids aws-lc-sys/cmake
+  # cross-compile failure when zig links x86_64-apple-darwin from arm64)
+  - id: macos
+    builder: rust
+    binary: pup
+    command: build
+    targets:
       - x86_64-apple-darwin
       - aarch64-apple-darwin
     flags:
