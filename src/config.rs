@@ -299,12 +299,14 @@ pub fn load_token_from_storage(site: &str, org: Option<&str>) -> Option<String> 
     }
 }
 
+#[cfg(all(not(feature = "browser"), not(target_arch = "wasm32")))]
 enum ResolvedToken {
     Valid(String),
     Refreshed(crate::auth::types::TokenSet),
     Expired,
 }
 
+#[cfg(all(not(feature = "browser"), not(target_arch = "wasm32")))]
 fn resolve_token<F>(
     tokens: crate::auth::types::TokenSet,
     creds: Option<&crate::auth::types::ClientCredentials>,
