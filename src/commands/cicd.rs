@@ -482,9 +482,8 @@ pub async fn flaky_tests_search(
     };
 
     use datadog_api_client::datadogV2::model::{
-        FlakyTestsSearchFilter, FlakyTestsSearchPageOptions,
-        FlakyTestsSearchRequestAttributes, FlakyTestsSearchRequestData,
-        FlakyTestsSearchRequestDataType, FlakyTestsSearchSort,
+        FlakyTestsSearchFilter, FlakyTestsSearchPageOptions, FlakyTestsSearchRequestAttributes,
+        FlakyTestsSearchRequestData, FlakyTestsSearchRequestDataType, FlakyTestsSearchSort,
     };
     let mut attrs = FlakyTestsSearchRequestAttributes::new();
     if let Some(q) = query {

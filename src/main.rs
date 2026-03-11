@@ -3640,7 +3640,10 @@ enum CicdFlakyTestActions {
         limit: i64,
         #[arg(long, default_value_t = false, help = "Include status history")]
         include_history: bool,
-        #[arg(long, help = "Sort order (fqn, -fqn, first_flaked, -first_flaked, last_flaked, -last_flaked, failure_rate, -failure_rate, pipelines_failed, -pipelines_failed, pipelines_duration_lost, -pipelines_duration_lost)")]
+        #[arg(
+            long,
+            help = "Sort order (fqn, -fqn, first_flaked, -first_flaked, last_flaked, -last_flaked, failure_rate, -failure_rate, pipelines_failed, -pipelines_failed, pipelines_duration_lost, -pipelines_duration_lost)"
+        )]
         sort: Option<String>,
     },
     /// Update flaky tests
