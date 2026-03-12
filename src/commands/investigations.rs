@@ -13,7 +13,7 @@ pub async fn list(cfg: &Config, page_limit: i64, page_offset: i64) -> Result<()>
 }
 
 pub async fn get(cfg: &Config, investigation_id: &str) -> Result<()> {
-    let path = format!("/api/v2/bits-ai/investigations/{investigation_id}");
+    let path = format!("/api/unstable/bits-ai/investigation/{investigation_id}");
     let data = client::raw_get(cfg, &path).await?;
     formatter::output(cfg, &data)
 }
