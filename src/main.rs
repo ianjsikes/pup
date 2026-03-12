@@ -1864,9 +1864,8 @@ enum Commands {
     ///   pup workflows instances cancel <workflow-id> <instance-id>
     ///
     /// AUTHENTICATION:
-    ///   Most commands accept either OAuth2 or API keys.
-    ///   The 'run' command requires DD_API_KEY + DD_APP_KEY (OAuth is not supported
-    ///   for API trigger execution).
+    ///   All workflow commands require DD_API_KEY + DD_APP_KEY.
+    ///   OAuth2 bearer tokens are not supported for workflow operations at this time.
     #[command(verbatim_doc_comment)]
     Workflows {
         #[command(subcommand)]
@@ -7421,7 +7420,13 @@ async fn main_inner() -> anyhow::Result<()> {
         },
         // --- Workflows ---
         Commands::Workflows { action } => {
-            cfg.validate_auth()?;
+            cfg.validate_api_and_app_keys().map_err(|_| {
+                anyhow::anyhow!(
+                    "workflow commands require DD_API_KEY and DD_APP_KEY with workflow_* scopes\n\
+                     OAuth2 bearer tokens are not supported for workflow operations.\n\
+                     See: https://docs.datadoghq.com/api/latest/workflow-automation"
+                )
+            })?;
             match action {
                 WorkflowActions::Get { workflow_id } => {
                     commands::workflows::get(&cfg, &workflow_id).await?;

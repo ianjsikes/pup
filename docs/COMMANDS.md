@@ -68,6 +68,8 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 
 **Note:** RUM command is fully operational. Apps and sessions work completely. Metrics and retention-filters support list/get operations (create/update/delete operations pending due to complex API type structures).
 
+**Auth note:** All workflow commands require `DD_API_KEY` + `DD_APP_KEY`. OAuth2 bearer tokens are not supported for workflow operations.
+
 ## Common Patterns
 
 ### List Operations

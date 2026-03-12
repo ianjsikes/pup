@@ -13,16 +13,13 @@ use crate::formatter::{self, Metadata};
 use crate::util;
 
 // ---------------------------------------------------------------------------
-// Helper: build a WorkflowAutomationAPI with bearer-token support
+// Helper: build a WorkflowAutomationAPI (API key auth only)
 // ---------------------------------------------------------------------------
 
 #[cfg(not(target_arch = "wasm32"))]
 fn make_api(cfg: &Config) -> WorkflowAutomationAPI {
     let dd_cfg = client::make_dd_config(cfg);
-    match client::make_bearer_client(cfg) {
-        Some(c) => WorkflowAutomationAPI::with_client_and_config(dd_cfg, c),
-        None => WorkflowAutomationAPI::with_config(dd_cfg),
-    }
+    WorkflowAutomationAPI::with_config(dd_cfg)
 }
 
 // ---------------------------------------------------------------------------
@@ -113,8 +110,6 @@ pub async fn run(
     wait: bool,
     timeout: &str,
 ) -> Result<()> {
-    cfg.validate_api_and_app_keys()?;
-
     let dd_cfg = client::make_dd_config(cfg);
     let api = WorkflowAutomationAPI::with_config(dd_cfg);
 
