@@ -401,6 +401,7 @@ enum Commands {
     ///   pup auth logout
     ///
     ///   # Login to different Datadog site
+    ///   pup auth login --site datadoghq.eu
     ///   DD_SITE=datadoghq.eu pup auth login
     ///
     ///   # Login to a child org (multi-org support)
@@ -420,11 +421,13 @@ enum Commands {
     /// MULTI-SITE SUPPORT:
     ///   Each Datadog site maintains separate credentials:
     ///
-    ///   DD_SITE=datadoghq.com pup auth login     # US1 (default)
-    ///   DD_SITE=datadoghq.eu pup auth login      # EU1
-    ///   DD_SITE=us3.datadoghq.com pup auth login # US3
-    ///   DD_SITE=us5.datadoghq.com pup auth login # US5
-    ///   DD_SITE=ap1.datadoghq.com pup auth login # AP1
+    ///   pup auth login --site datadoghq.com     # US1 (default)
+    ///   pup auth login --site datadoghq.eu      # EU1
+    ///   pup auth login --site us3.datadoghq.com # US3
+    ///   pup auth login --site us5.datadoghq.com # US5
+    ///   pup auth login --site ap1.datadoghq.com # AP1
+    ///   DD_SITE=datadoghq.com pup auth login     # US1 (via env var)
+    ///   DD_SITE=datadoghq.eu pup auth login      # EU1 (via env var)
     ///
     /// MULTI-ORG SUPPORT:
     ///   Datadog parent/child sub-organizations each get their own session:
@@ -5044,6 +5047,10 @@ enum AuthActions {
         /// Shorthand: --ro
         #[arg(long, alias = "ro", visible_alias = "ro")]
         read_only: bool,
+        /// Datadog site to authenticate against (e.g. datadoghq.eu, us3.datadoghq.com).
+        /// Overrides DD_SITE env var and config file. Defaults to datadoghq.com.
+        #[arg(long, value_name = "SITE")]
+        site: Option<String>,
     },
     /// Logout and clear tokens
     Logout,
@@ -7491,7 +7498,14 @@ async fn main_inner() -> anyhow::Result<()> {
         }
         // --- Auth ---
         Commands::Auth { action } => match action {
-            AuthActions::Login { scopes, read_only } => {
+            AuthActions::Login {
+                scopes,
+                read_only,
+                site,
+            } => {
+                if let Some(s) = site {
+                    cfg.site = s;
+                }
                 let is_read_only = read_only || cfg.read_only;
                 let resolved =
                     resolve_login_scopes(scopes.as_deref(), cfg.org.as_deref(), is_read_only);
