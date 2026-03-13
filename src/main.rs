@@ -595,8 +595,8 @@ enum Commands {
     /// Generate shell completions for pup.
     ///
     /// Shell completions enable tab-completion of commands, subcommands, and flags
-    /// in your terminal. After generating completions, source or install them
-    /// according to your shell's requirements.
+    /// in your terminal. Use --install to automatically write completions to the
+    /// standard location for your shell, or pipe to stdout to manage it yourself.
     ///
     /// SUPPORTED SHELLS:
     ///   • bash: Bourne Again Shell
@@ -606,19 +606,24 @@ enum Commands {
     ///   • powershell: PowerShell
     ///
     /// EXAMPLES:
-    ///   # Generate bash completions
+    ///   # Auto-install completions (recommended)
+    ///   pup completions bash --install
+    ///   pup completions zsh --install
+    ///   pup completions fish --install
+    ///   pup completions powershell --install
+    ///
+    ///   # Or pipe to a custom location
     ///   pup completions bash > /etc/bash_completion.d/pup
-    ///
-    ///   # Generate zsh completions
     ///   pup completions zsh > ~/.zfunc/_pup
-    ///   # Then add to .zshrc: fpath+=~/.zfunc; autoload -Uz compinit; compinit
-    ///
-    ///   # Generate fish completions
     ///   pup completions fish > ~/.config/fish/completions/pup.fish
+    #[cfg(not(target_arch = "wasm32"))]
     #[command(verbatim_doc_comment)]
     Completions {
         /// Shell to generate completions for
         shell: clap_complete::Shell,
+        /// Install completions to the default location for the shell
+        #[arg(long)]
+        install: bool,
     },
     /// Manage cost and billing data
     ///
@@ -7482,8 +7487,13 @@ async fn main_inner() -> anyhow::Result<()> {
             }
         }
         // --- Utility ---
-        Commands::Completions { shell } => {
-            clap_complete::generate(shell, &mut Cli::command(), "pup", &mut std::io::stdout());
+        #[cfg(not(target_arch = "wasm32"))]
+        Commands::Completions { shell, install } => {
+            if install {
+                commands::completions::install(shell)?;
+            } else {
+                commands::completions::generate(shell);
+            }
         }
         Commands::Version => println!("{}", version::build_info()),
         Commands::Test => commands::test::run(&cfg)?,

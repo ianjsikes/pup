@@ -233,6 +233,7 @@ pub fn status(cfg: &Config) -> Result<()> {
     })
 }
 
+#[cfg(debug_assertions)]
 pub fn token(cfg: &Config) -> Result<()> {
     if let Some(token) = &cfg.access_token {
         println!("{token}");
