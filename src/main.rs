@@ -4031,6 +4031,20 @@ enum ErrorTrackingIssueActions {
             help = "Sort order: TOTAL_COUNT, FIRST_SEEN, IMPACTED_SESSIONS, PRIORITY"
         )]
         order_by: String,
+        #[arg(
+            long,
+            conflicts_with = "persona",
+            required_unless_present = "persona",
+            help = "Error source track: trace, logs, or rum"
+        )]
+        track: Option<String>,
+        #[arg(
+            long,
+            conflicts_with = "track",
+            required_unless_present = "track",
+            help = "Client persona filter: ALL, BROWSER, MOBILE, or BACKEND"
+        )]
+        persona: Option<String>,
     },
     /// Get issue details
     Get { issue_id: String },
@@ -6883,8 +6897,15 @@ async fn main_inner() -> anyhow::Result<()> {
             cfg.validate_auth()?;
             match action {
                 ErrorTrackingActions::Issues { action } => match action {
-                    ErrorTrackingIssueActions::Search { query, limit, .. } => {
-                        commands::error_tracking::issues_search(&cfg, query, limit).await?;
+                    ErrorTrackingIssueActions::Search {
+                        query,
+                        limit,
+                        track,
+                        persona,
+                        ..
+                    } => {
+                        commands::error_tracking::issues_search(&cfg, query, limit, track, persona)
+                            .await?;
                     }
                     ErrorTrackingIssueActions::Get { issue_id } => {
                         commands::error_tracking::issues_get(&cfg, &issue_id).await?;

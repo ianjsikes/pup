@@ -1767,8 +1767,67 @@ async fn test_error_tracking_issues_search() {
     let mut s = mockito::Server::new_async().await;
     let cfg = test_config(&s.url());
     mock_all(&mut s, r#"{"data": []}"#).await;
-    let _ = crate::commands::error_tracking::issues_search(&cfg, None, 10).await;
+    let _ =
+        crate::commands::error_tracking::issues_search(&cfg, None, 10, Some("trace".into()), None)
+            .await;
     cleanup_env();
+}
+
+#[tokio::test]
+async fn test_error_tracking_issues_search_persona() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{"data": []}"#).await;
+    let _ = crate::commands::error_tracking::issues_search(
+        &cfg,
+        None,
+        10,
+        None,
+        Some("BROWSER".into()),
+    )
+    .await;
+    cleanup_env();
+}
+
+#[tokio::test]
+async fn test_error_tracking_issues_search_track_case_insensitive() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{"data": []}"#).await;
+    let _ =
+        crate::commands::error_tracking::issues_search(&cfg, None, 10, Some("RUM".into()), None)
+            .await;
+    cleanup_env();
+}
+
+#[test]
+fn test_error_tracking_clap_mutual_exclusivity() {
+    let result = crate::Cli::command().try_get_matches_from([
+        "pup",
+        "error-tracking",
+        "issues",
+        "search",
+        "--track",
+        "trace",
+        "--persona",
+        "ALL",
+    ]);
+    assert!(
+        result.is_err(),
+        "expected error when both --track and --persona are provided"
+    );
+}
+
+#[test]
+fn test_error_tracking_clap_neither_provided() {
+    let result =
+        crate::Cli::command().try_get_matches_from(["pup", "error-tracking", "issues", "search"]);
+    assert!(
+        result.is_err(),
+        "expected error when neither --track nor --persona is provided"
+    );
 }
 
 // --- Cloud ---
