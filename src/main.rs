@@ -49,6 +49,35 @@ pub(crate) struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Start a local ACP server that proxies to Datadog Bits AI
+    ///
+    /// Spawns an HTTP server implementing the Agent Communication Protocol (ACP).
+    /// ACP clients (AI agents, coding assistants) can connect and ask questions
+    /// about your Datadog environment. Requests are forwarded to the Bits AI
+    /// assistant and streamed back via ACP's SSE protocol.
+    ///
+    /// COMMANDS:
+    ///   serve     Start the ACP server (default port 9099)
+    ///
+    /// EXAMPLES:
+    ///   # Start on default port
+    ///   pup acp serve
+    ///
+    ///   # Start on a custom port
+    ///   pup acp serve --port 8080
+    ///
+    ///   # Start bound to all interfaces
+    ///   pup acp serve --host 0.0.0.0
+    ///
+    /// AUTHENTICATION:
+    ///   Requires OAuth2 (via 'pup auth login') or DD_API_KEY + DD_APP_KEY.
+    ///
+    /// ACP SPEC: https://agentcommunicationprotocol.dev/
+    #[command(verbatim_doc_comment)]
+    Acp {
+        #[command(subcommand)]
+        action: AcpActions,
+    },
     /// Schema and guide for the datadog-agent daemon and AI coding assistants
     ///
     /// This command group covers two distinct purposes:
@@ -4807,6 +4836,42 @@ enum TracesActions {
     },
 }
 
+// ---- ACP ----
+#[derive(Subcommand)]
+enum AcpActions {
+    /// Start an ACP server that delegates to Datadog Bits AI
+    ///
+    /// Spawns a local HTTP server implementing the Agent Communication Protocol (ACP).
+    /// Requests are proxied to the Datadog Bits AI assistant (/api/v2/assistant).
+    ///
+    /// Endpoints served:
+    ///   GET  /agent.json       — ACP agent card
+    ///   POST /runs             — synchronous run
+    ///   POST /runs/stream      — streaming run (SSE)
+    ///
+    /// EXAMPLES:
+    ///   # Start on default port 9099
+    ///   pup acp serve
+    ///
+    ///   # Start on a custom port
+    ///   pup acp serve --port 8080
+    #[command(verbatim_doc_comment)]
+    Serve {
+        #[arg(
+            long,
+            default_value_t = commands::acp::DEFAULT_PORT,
+            help = "Port to listen on"
+        )]
+        port: u16,
+        #[arg(
+            long,
+            default_value = commands::acp::DEFAULT_HOST,
+            help = "Host address to bind to"
+        )]
+        host: String,
+    },
+}
+
 // ---- Agent (placeholder) ----
 #[derive(Subcommand)]
 enum AgentActions {
@@ -7407,6 +7472,12 @@ async fn main_inner() -> anyhow::Result<()> {
                 }
             }
         }
+        // --- ACP ---
+        Commands::Acp { action } => match action {
+            AcpActions::Serve { port, host } => {
+                commands::acp::serve(&cfg, port, &host).await?;
+            }
+        },
         // --- Agent ---
         Commands::Agent { action } => match action {
             AgentActions::Schema { compact } => {
