@@ -72,7 +72,24 @@ jobs:
           cp README.md staging/
           cd staging
           7z a "../pup_${{ steps.version.outputs.version }}_Windows_x86_64.zip" .
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
       - name: Upload to release
         run: gh release upload "$GITHUB_REF_NAME" "pup_${{ steps.version.outputs.version }}_Windows_x86_64.zip" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Add to checksums and re-sign
+        run: |
+          ZIP="pup_${{ steps.version.outputs.version }}_Windows_x86_64.zip"
+          CHECKSUMS="pup_${{ steps.version.outputs.version }}_checksums.txt"
+          SHA=$(sha256sum "$ZIP" | awk '{print $1}')
+          gh release download "$GITHUB_REF_NAME" --pattern "$CHECKSUMS" --output "$CHECKSUMS"
+          echo "$SHA  $ZIP" >> "$CHECKSUMS"
+          gh release upload "$GITHUB_REF_NAME" "$CHECKSUMS" --clobber
+          cosign sign-blob \
+            --bundle="${CHECKSUMS}.sigstore.json" \
+            "$CHECKSUMS" \
+            --yes
+          gh release upload "$GITHUB_REF_NAME" "${CHECKSUMS}.sigstore.json" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
