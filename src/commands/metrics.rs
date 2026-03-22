@@ -1,4 +1,34 @@
 use anyhow::Result;
+
+/// Matches a metric name against a glob pattern where `*` is a wildcard.
+/// Falls back to substring match when no `*` is present.
+fn matches_glob(text: &str, pattern: &str) -> bool {
+    if !pattern.contains('*') {
+        return text.contains(pattern);
+    }
+    let parts: Vec<&str> = pattern.split('*').collect();
+    let mut remaining = text;
+    for (i, part) in parts.iter().enumerate() {
+        if part.is_empty() {
+            continue;
+        }
+        if i == 0 {
+            if !remaining.starts_with(part) {
+                return false;
+            }
+            remaining = &remaining[part.len()..];
+        } else if i == parts.len() - 1 {
+            return remaining.ends_with(part);
+        } else {
+            match remaining.find(part) {
+                Some(pos) => remaining = &remaining[pos + part.len()..],
+                None => return false,
+            }
+        }
+    }
+    true
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::api_metrics::{
     ListActiveMetricsOptionalParams, MetricsAPI as MetricsV1API,
@@ -35,13 +65,17 @@ pub async fn list(cfg: &Config, filter: Option<String>, from: String) -> Result<
     // Client-side filter if provided
     if let Some(pattern) = filter {
         let pattern = pattern.to_lowercase();
-        if let Some(metrics) = &resp.metrics {
-            let filtered: Vec<_> = metrics
-                .iter()
-                .filter(|m| m.to_lowercase().contains(&pattern))
-                .collect();
-            return formatter::output(cfg, &filtered);
-        }
+        let metrics = resp.metrics.as_deref().unwrap_or(&[]);
+        let filtered: Vec<&str> = metrics
+            .iter()
+            .filter(|m| matches_glob(&m.to_lowercase(), &pattern))
+            .map(|m| m.as_str())
+            .collect();
+        let output = serde_json::json!({
+            "from": resp.from,
+            "metrics": filtered,
+        });
+        return formatter::output(cfg, &output);
     }
 
     formatter::output(cfg, &resp)
@@ -56,17 +90,21 @@ pub async fn list(cfg: &Config, filter: Option<String>, from: String) -> Result<
     // Client-side filter if provided
     if let Some(pattern) = filter {
         let pattern = pattern.to_lowercase();
-        if let Some(metrics) = data.get("metrics").and_then(|v| v.as_array()) {
-            let filtered: Vec<_> = metrics
-                .iter()
-                .filter(|m| {
-                    m.as_str()
-                        .map(|s| s.to_lowercase().contains(&pattern))
-                        .unwrap_or(false)
-                })
-                .collect();
-            return crate::formatter::output(cfg, &filtered);
-        }
+        let metrics = data
+            .get("metrics")
+            .and_then(|v| v.as_array())
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+        let filtered: Vec<&str> = metrics
+            .iter()
+            .filter_map(|m| m.as_str())
+            .filter(|s| matches_glob(&s.to_lowercase(), &pattern))
+            .collect();
+        let output = serde_json::json!({
+            "from": data.get("from"),
+            "metrics": filtered,
+        });
+        return crate::formatter::output(cfg, &output);
     }
 
     crate::formatter::output(cfg, &data)
@@ -221,4 +259,48 @@ pub async fn tags_list(cfg: &Config, metric_name: &str) -> Result<()> {
     let path = format!("/api/v2/metrics/{metric_name}/tags");
     let data = crate::api::get(cfg, &path, &[]).await?;
     crate::formatter::output(cfg, &data)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::matches_glob;
+
+    #[test]
+    fn test_glob_suffix_wildcard() {
+        assert!(matches_glob("system.cpu.user", "system.*"));
+        assert!(matches_glob("system.mem.used", "system.*"));
+        assert!(!matches_glob("datadog.agent.cpu", "system.*"));
+    }
+
+    #[test]
+    fn test_glob_prefix_wildcard() {
+        assert!(matches_glob("avg.system.cpu", "*.cpu"));
+        assert!(!matches_glob("system.cpu.user", "*.cpu"));
+    }
+
+    #[test]
+    fn test_glob_both_wildcards() {
+        assert!(matches_glob("system.cpu.user", "*.cpu.*"));
+        assert!(matches_glob("datadog.system.cpu.idle", "*.cpu.*"));
+        assert!(!matches_glob("system.mem.used", "*.cpu.*"));
+    }
+
+    #[test]
+    fn test_glob_no_wildcard_substring() {
+        assert!(matches_glob("datadog.estimated_usage.platform", "platform"));
+        assert!(matches_glob("system.cpu.user", "cpu"));
+        assert!(!matches_glob("system.mem.used", "cpu"));
+    }
+
+    #[test]
+    fn test_glob_wildcard_only() {
+        assert!(matches_glob("anything", "*"));
+        assert!(matches_glob("", "*"));
+    }
+
+    #[test]
+    fn test_glob_exact_with_dot() {
+        assert!(matches_glob("system.cpu.user", "system.cpu.user"));
+        assert!(!matches_glob("system.cpu.idle", "system.cpu.user"));
+    }
 }
