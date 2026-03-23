@@ -954,6 +954,7 @@ fn add_auth(
     api_key: Option<&str>,
     app_key: Option<&str>,
 ) -> Result<reqwest::RequestBuilder> {
+    let req = req.header("User-Agent", crate::useragent::get());
     if let Some(token) = access_token {
         return Ok(req.header("Authorization", format!("Bearer {token}")));
     }
