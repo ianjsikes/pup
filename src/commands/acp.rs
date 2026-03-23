@@ -185,6 +185,7 @@ async fn handle_connection(
         ("GET", "/agent.json") | ("GET", "/.well-known/agent.json") => {
             write_agent_card(&mut writer, agent_id).await
         }
+        // ACP endpoints
         ("POST", "/runs") => {
             handle_run(
                 &mut writer,
@@ -208,6 +209,30 @@ async fn handle_connection(
                 app_key,
                 &body,
                 true,
+            )
+            .await
+        }
+        // OpenAI-compatible endpoints (for opencode / ai-sdk clients)
+        ("GET", "/models") | ("GET", "/v1/models") => {
+            write_json_response(
+                &mut writer,
+                200,
+                serde_json::json!({
+                    "object": "list",
+                    "data": [{"id": "datadog-ai", "object": "model", "owned_by": "datadog"}]
+                }),
+            )
+            .await
+        }
+        ("POST", "/chat/completions") | ("POST", "/v1/chat/completions") => {
+            handle_openai_completions(
+                &mut writer,
+                app_base,
+                agent_id,
+                access_token,
+                api_key,
+                app_key,
+                &body,
             )
             .await
         }
@@ -346,6 +371,259 @@ async fn handle_run(
     } else {
         collect_lassie_to_acp(writer, resp, &acp_run_id, agent_id).await
     }
+}
+
+/// Handles OpenAI-compatible POST /chat/completions, proxying to lassie-ng.
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::too_many_arguments)]
+async fn handle_openai_completions(
+    writer: &mut OwnedWriteHalf,
+    app_base: &str,
+    agent_id: &str,
+    access_token: Option<&str>,
+    api_key: Option<&str>,
+    app_key: Option<&str>,
+    body: &[u8],
+) -> Result<()> {
+    let req: serde_json::Value = match serde_json::from_slice(body) {
+        Ok(v) => v,
+        Err(e) => {
+            return write_json_response(
+                writer,
+                400,
+                serde_json::json!({"error": {"message": format!("invalid JSON: {e}"), "type": "invalid_request_error"}}),
+            )
+            .await;
+        }
+    };
+
+    let streaming = req.get("stream").and_then(|v| v.as_bool()).unwrap_or(false);
+    let model = req
+        .get("model")
+        .and_then(|v| v.as_str())
+        .unwrap_or("datadog-ai")
+        .to_string();
+
+    // Extract the last user message from the OpenAI messages array
+    let message = match extract_openai_message(&req) {
+        Some(m) => m,
+        None => {
+            return write_json_response(
+                writer,
+                400,
+                serde_json::json!({"error": {"message": "no user message found", "type": "invalid_request_error"}}),
+            )
+            .await;
+        }
+    };
+
+    let lassie_body = serde_json::json!({
+        "input": message,
+        "stream": streaming,
+    });
+
+    let url = format!("{app_base}{LASSIE_BASE}/agents/{agent_id}/messages");
+    let client = reqwest::Client::new();
+    let mut lreq = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .header(
+            "Accept",
+            if streaming {
+                "text/event-stream"
+            } else {
+                "application/json"
+            },
+        );
+
+    lreq = match add_auth(lreq, access_token, api_key, app_key) {
+        Ok(r) => r,
+        Err(_) => {
+            return write_json_response(
+                writer,
+                401,
+                serde_json::json!({"error": {"message": "no authentication configured", "type": "authentication_error"}}),
+            )
+            .await;
+        }
+    };
+
+    let resp = match lreq.json(&lassie_body).send().await {
+        Ok(r) => r,
+        Err(e) => {
+            return write_json_response(
+                writer,
+                502,
+                serde_json::json!({"error": {"message": format!("upstream error: {e}"), "type": "api_error"}}),
+            )
+            .await;
+        }
+    };
+
+    if !resp.status().is_success() {
+        let status = resp.status().as_u16();
+        let err_body = resp.text().await.unwrap_or_default();
+        return write_json_response(
+            writer,
+            status,
+            serde_json::json!({"error": {"message": format!("lassie-ng error (HTTP {status}): {err_body}"), "type": "api_error"}}),
+        )
+        .await;
+    }
+
+    if streaming {
+        stream_lassie_as_openai(writer, resp, &model).await
+    } else {
+        collect_lassie_as_openai(writer, resp, &model).await
+    }
+}
+
+/// Collects lassie-ng JSON response and returns OpenAI chat completion format.
+#[cfg(not(target_arch = "wasm32"))]
+async fn collect_lassie_as_openai(
+    writer: &mut OwnedWriteHalf,
+    resp: reqwest::Response,
+    model: &str,
+) -> Result<()> {
+    let val: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to parse lassie-ng response: {e}"))?;
+
+    let text = extract_lassie_text(&val);
+    let completion_id = format!("chatcmpl-{}", uuid::Uuid::new_v4());
+    let created = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let body = serde_json::json!({
+        "id": completion_id,
+        "object": "chat.completion",
+        "created": created,
+        "model": model,
+        "choices": [{
+            "index": 0,
+            "message": {"role": "assistant", "content": text},
+            "finish_reason": "stop"
+        }],
+        "usage": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0
+        }
+    });
+    write_json_response(writer, 200, body).await
+}
+
+/// Streams lassie-ng SSE as OpenAI chat completion chunks.
+#[cfg(not(target_arch = "wasm32"))]
+async fn stream_lassie_as_openai(
+    writer: &mut OwnedWriteHalf,
+    resp: reqwest::Response,
+    model: &str,
+) -> Result<()> {
+    use futures::StreamExt;
+
+    writer
+        .write_all(
+            b"HTTP/1.1 200 OK\r\n\
+              Content-Type: text/event-stream\r\n\
+              Cache-Control: no-cache\r\n\
+              X-Accel-Buffering: no\r\n\
+              Access-Control-Allow-Origin: *\r\n\
+              \r\n",
+        )
+        .await?;
+
+    let completion_id = format!("chatcmpl-{}", uuid::Uuid::new_v4());
+    let created = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    // Send role chunk first
+    let role_chunk = serde_json::json!({
+        "id": &completion_id,
+        "object": "chat.completion.chunk",
+        "created": created,
+        "model": model,
+        "choices": [{"index": 0, "delta": {"role": "assistant", "content": ""}, "finish_reason": null}]
+    });
+    writer
+        .write_all(format!("data: {}\n\n", role_chunk).as_bytes())
+        .await?;
+
+    let mut buffer = String::new();
+    let mut bytes_stream = resp.bytes_stream();
+
+    while let Some(chunk_result) = bytes_stream.next().await {
+        let chunk = chunk_result.map_err(|e| anyhow::anyhow!("stream read error: {e}"))?;
+        buffer.push_str(&String::from_utf8_lossy(&chunk));
+
+        while let Some(end) = buffer.find("\n\n") {
+            let event_block = buffer[..end].to_string();
+            buffer = buffer[end + 2..].to_string();
+
+            for line in event_block.lines() {
+                let Some(data_str) = line.strip_prefix("data: ") else {
+                    continue;
+                };
+
+                if data_str.trim() == "[DONE]" {
+                    // Send finish chunk then [DONE]
+                    let finish = serde_json::json!({
+                        "id": &completion_id,
+                        "object": "chat.completion.chunk",
+                        "created": created,
+                        "model": model,
+                        "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]
+                    });
+                    writer
+                        .write_all(format!("data: {finish}\n\ndata: [DONE]\n\n").as_bytes())
+                        .await?;
+                    return Ok(());
+                }
+
+                let Ok(val) = serde_json::from_str::<serde_json::Value>(data_str) else {
+                    continue;
+                };
+
+                if val
+                    .get("message_type")
+                    .and_then(|v| v.as_str())
+                    .is_some_and(|t| t == "assistant_message")
+                {
+                    let content = val.get("content").and_then(|v| v.as_str()).unwrap_or("");
+                    if !content.is_empty() {
+                        let oai_chunk = serde_json::json!({
+                            "id": &completion_id,
+                            "object": "chat.completion.chunk",
+                            "created": created,
+                            "model": model,
+                            "choices": [{"index": 0, "delta": {"content": content}, "finish_reason": null}]
+                        });
+                        writer
+                            .write_all(format!("data: {oai_chunk}\n\n").as_bytes())
+                            .await?;
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback close
+    let finish = serde_json::json!({
+        "id": &completion_id,
+        "object": "chat.completion.chunk",
+        "created": created,
+        "model": model,
+        "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]
+    });
+    writer
+        .write_all(format!("data: {finish}\n\ndata: [DONE]\n\n").as_bytes())
+        .await?;
+    Ok(())
 }
 
 /// Collects the full lassie-ng JSON response and returns a single ACP run response.
@@ -633,6 +911,35 @@ fn extract_acp_message(req: &serde_json::Value) -> Option<String> {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Extracts the last user message text from an OpenAI messages array.
+fn extract_openai_message(req: &serde_json::Value) -> Option<String> {
+    let messages = req.get("messages")?.as_array()?;
+    // Walk in reverse to find the last user message
+    for msg in messages.iter().rev() {
+        if msg.get("role").and_then(|r| r.as_str()) != Some("user") {
+            continue;
+        }
+        if let Some(content) = msg.get("content") {
+            if let Some(s) = content.as_str() {
+                if !s.is_empty() {
+                    return Some(s.to_string());
+                }
+            } else if let Some(blocks) = content.as_array() {
+                let text: String = blocks
+                    .iter()
+                    .filter(|b| b.get("type").and_then(|t| t.as_str()) == Some("text"))
+                    .filter_map(|b| b.get("text").and_then(|t| t.as_str()))
+                    .collect::<Vec<_>>()
+                    .join("");
+                if !text.is_empty() {
+                    return Some(text);
                 }
             }
         }
