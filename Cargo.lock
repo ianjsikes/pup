@@ -2572,7 +2572,7 @@ dependencies = [
 
 [[package]]
 name = "pup"
-version = "0.33.1"
+version = "0.33.2"
 dependencies = [
  "aes-gcm",
  "anyhow",
