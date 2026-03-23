@@ -434,6 +434,62 @@ pup workflows instances get <workflow-id> <instance-id>
 pup workflows instances cancel <workflow-id> <instance-id>
 ```
 
+## IDP (Service Catalog)
+
+### Get Full Service Context
+```bash
+# Get owner, on-call, health, dependencies, and metadata gaps in one call
+pup idp assist my-service
+
+# Useful as a starting point for incident response or code review
+pup idp assist payments-api
+```
+
+### Find Entities
+```bash
+# Search services by name (fuzzy match)
+pup idp find payments
+
+# Use kind: prefix to search other entity types
+pup idp find "kind:team AND name:backend"
+```
+
+### Get Ownership and On-Call
+```bash
+# Show owning team and current on-call responders
+pup idp owner my-service
+```
+
+### Show Service Dependencies
+```bash
+# List upstream (callers) and downstream (callees) services
+pup idp deps my-service
+```
+
+### Register a Service Definition
+```bash
+# POST a service.datadog.yaml to the Service Definitions API
+pup idp register service.datadog.yaml
+
+# Verify after registration
+pup idp assist my-service
+```
+
+### Incident Response Workflow with IDP
+```bash
+# Get full service context immediately
+pup idp assist payments-api
+
+# Investigate alerts for the service
+pup monitors list --tag="service:payments-api"
+
+# Check who is on-call
+pup idp owner payments-api
+
+# Review upstream services that may be affected
+pup idp deps payments-api
+```
+
 ## Output Formatting
 
 ### JSON Output (Default)

@@ -194,8 +194,8 @@ See [TESTING.md](docs/TESTING.md) for details.
 
 ## Implementation Status
 
-- **58 command modules** implemented
-- **320+ subcommands** across 56 command groups
+- **59 command modules** implemented
+- **325+ subcommands** across 57 command groups
 - **60 unit tests** passing
 - **155/155 API output** matches Go version exactly
 - **390/390 command descriptions** match Go version

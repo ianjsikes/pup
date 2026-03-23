@@ -45,6 +45,7 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | security | rules, signals, findings, content-packs, risk-scores | src/commands/security.rs | ✅ |
 | organizations | get, list | src/commands/organizations.rs | ✅ |
 | service-catalog | list, get | src/commands/service_catalog.rs | ✅ |
+| idp | assist, find, owner, deps, register | src/commands/idp.rs | ✅ |
 | error-tracking | issues (search, get) | src/commands/error_tracking.rs | ✅ |
 | scorecards | list, get | src/commands/scorecards.rs | ✅ |
 | usage | summary, hourly | src/commands/usage.rs | ✅ |
@@ -70,7 +71,7 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | change-requests | create, get, update, create-branch, decisions (update, delete) | src/commands/change_management.rs | ✅ |
 | app-builder | list, get, create, update, delete, delete-batch, publish, unpublish | src/commands/app_builder.rs | ✅ |
 
-**Summary:** 49 working, 0 API-blocked, 0 placeholders
+**Summary:** 50 working, 0 API-blocked, 0 placeholders
 
 **Note:** RUM command is fully operational. Apps and sessions work completely. Metrics and retention-filters support list/get operations (create/update/delete operations pending due to complex API type structures).
 
@@ -157,6 +158,7 @@ pup infrastructure hosts list
 - **error-tracking** - Error management (issues search, issues get)
 - **scorecards** - Service quality (list, get)
 - **service-catalog** - Service registry (list, get)
+- **idp** - Service Catalog agent access (assist, find, owner, deps, register)
 
 ### Operations & Incident Response
 - **incidents** - Incident management (list, get, attachments, settings, handles, postmortem-templates)
@@ -200,6 +202,15 @@ Available on all commands:
 ```
 
 ## Recent Enhancements
+
+### v0.33.4 — IDP Commands for Service Catalog
+
+- ✅ **idp** (new) — Agent-native access to the Datadog Service Catalog
+  - `assist <entity>` — full context: owner, on-call, health, dependencies, metadata gaps, and suggested next actions
+  - `find <query>` — search entities by name (defaults to `kind:service`)
+  - `owner <entity>` — ownership + on-call responders for an entity
+  - `deps <entity>` — upstream/downstream service dependencies
+  - `register <file>` — POST a `service.datadog.yaml` to the Service Definitions API
 
 ### v0.28.0 — New Command Groups and Full Pipeline Implementation
 
