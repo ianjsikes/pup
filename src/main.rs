@@ -999,6 +999,42 @@ enum Commands {
         #[command(subcommand)]
         action: InfraActions,
     },
+    /// Internal Developer Portal — agent-native context layer
+    ///
+    /// Retrieve service context, ownership, health, dependencies, and
+    /// suggested next actions from the Datadog Service Catalog / IDP.
+    ///
+    /// CAPABILITIES:
+    ///   • Get a full context summary for any entity (assist)
+    ///   • Find entities by name or query (find)
+    ///   • Resolve ownership and on-call (owner)
+    ///   • Show upstream/downstream dependencies (deps)
+    ///   • Register a service definition from YAML (register)
+    ///
+    /// EXAMPLES:
+    ///   # Get full context for a service
+    ///   pup idp assist catalog-http
+    ///
+    ///   # Find entities matching a query
+    ///   pup idp find "catalog"
+    ///
+    ///   # Who owns this service?
+    ///   pup idp owner catalog-http
+    ///
+    ///   # Show dependencies
+    ///   pup idp deps catalog-http
+    ///
+    ///   # Register a service definition
+    ///   pup idp register service.datadog.yaml
+    ///
+    /// AUTHENTICATION:
+    ///   Requires either OAuth2 authentication (pup auth login) or API keys
+    ///   (DD_API_KEY and DD_APP_KEY environment variables).
+    #[command(verbatim_doc_comment)]
+    Idp {
+        #[command(subcommand)]
+        action: IdpActions,
+    },
     /// Manage third-party integrations
     ///
     /// Manage third-party integrations with external services.
@@ -2738,6 +2774,95 @@ enum InfraHostActions {
     },
     /// Get host details
     Get { hostname: String },
+}
+
+// ---- IDP (Internal Developer Portal) ----
+#[derive(Subcommand)]
+enum IdpActions {
+    /// Get full context summary with suggested next actions
+    ///
+    /// The flagship IDP command. Makes parallel API calls to return
+    /// a single unified view of any service entity:
+    ///
+    /// RETURNS:
+    ///   • Entity info (name, kind, description, lifecycle, tier, owner)
+    ///   • Owner team details (handle, name, member count, Slack channels)
+    ///   • Health signals (monitors, incidents, SLOs — pre-computed counts)
+    ///   • Dependencies (upstream/downstream services)
+    ///   • Links (dashboards, repos, runbooks)
+    ///   • Metadata gaps (missing description, lifecycle, tier, runbook, docs)
+    ///   • Suggested next actions (based on current health and gaps)
+    ///
+    /// START HERE — this is the best first command to run for any entity.
+    /// Use the other commands (owner, deps, find) to drill deeper.
+    ///
+    /// EXAMPLES:
+    ///   pup idp assist catalog-http
+    ///   pup idp assist payment-service
+    ///   pup idp assist api-gateway
+    #[command(verbatim_doc_comment)]
+    Assist {
+        /// Entity name (e.g. "catalog-http", "payment-service")
+        entity: String,
+    },
+    /// Find entities by name or query
+    ///
+    /// Search the entity graph for services, resources, or other entities.
+    /// Useful when you don't know the exact entity name.
+    ///
+    /// QUERY SYNTAX:
+    ///   Simple text searches by name. Prefix with kind: to filter by type.
+    ///   Use AND to combine filters.
+    ///
+    /// EXAMPLES:
+    ///   pup idp find "catalog"
+    ///   pup idp find "kind:service AND name:payment"
+    ///   pup idp find "kind:service AND owner:platform"
+    #[command(verbatim_doc_comment)]
+    Find {
+        /// Search query (e.g. "catalog", "kind:service AND name:payment")
+        query: String,
+    },
+    /// Resolve ownership, team details, and on-call context
+    ///
+    /// Returns the owning team, member count, Slack channels,
+    /// and on-call information for routing questions or incidents.
+    ///
+    /// EXAMPLES:
+    ///   pup idp owner catalog-http
+    ///   pup idp owner payment-service
+    #[command(verbatim_doc_comment)]
+    Owner {
+        /// Entity name
+        entity: String,
+    },
+    /// Show upstream and downstream service dependencies
+    ///
+    /// Returns which services depend on this entity (upstream)
+    /// and which services this entity calls (downstream).
+    /// Useful for blast-radius analysis before making changes.
+    ///
+    /// EXAMPLES:
+    ///   pup idp deps catalog-http
+    ///   pup idp deps api-gateway
+    #[command(verbatim_doc_comment)]
+    Deps {
+        /// Entity name
+        entity: String,
+    },
+    /// Register a service definition from a YAML file
+    ///
+    /// POSTs a service.datadog.yaml file to the Datadog Service Catalog API.
+    /// The file should use the v2.2 schema format.
+    ///
+    /// EXAMPLES:
+    ///   pup idp register services/checkout-api/service.datadog.yaml
+    ///   pup idp register ./service.datadog.yaml
+    #[command(verbatim_doc_comment)]
+    Register {
+        /// Path to the service.datadog.yaml file
+        file: String,
+    },
 }
 
 // ---- Audit Logs ----
@@ -6365,6 +6490,27 @@ async fn main_inner() -> anyhow::Result<()> {
                         commands::infrastructure::hosts_get(&cfg, &hostname).await?;
                     }
                 },
+            }
+        }
+        // --- IDP (Internal Developer Portal) ---
+        Commands::Idp { action } => {
+            cfg.validate_auth()?;
+            match action {
+                IdpActions::Assist { entity } => {
+                    commands::idp::assist(&cfg, &entity).await?;
+                }
+                IdpActions::Find { query } => {
+                    commands::idp::find(&cfg, &query).await?;
+                }
+                IdpActions::Owner { entity } => {
+                    commands::idp::owner(&cfg, &entity).await?;
+                }
+                IdpActions::Deps { entity } => {
+                    commands::idp::deps(&cfg, &entity).await?;
+                }
+                IdpActions::Register { file } => {
+                    commands::idp::register(&cfg, &file).await?;
+                }
             }
         }
         // --- Audit Logs ---

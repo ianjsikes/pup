@@ -24,6 +24,7 @@ pub mod events;
 pub mod fleet;
 pub mod google_chat;
 pub mod hamr;
+pub mod idp;
 pub mod incidents;
 pub mod infrastructure;
 pub mod integrations;
