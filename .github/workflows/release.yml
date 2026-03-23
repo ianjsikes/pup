@@ -46,10 +46,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@main
       - name: Install build tools
-        run: cargo binstall --no-confirm cargo-zigbuild wasm-pack
+        run: brew install cargo-zigbuild wasm-pack
       - name: Install cosign
         uses: sigstore/cosign-installer@v3
       - name: Install syft
