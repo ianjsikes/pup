@@ -380,6 +380,12 @@ enum Commands {
     ///   # Summarize current incidents
     ///   pup bits ask "summarize active incidents"
     ///
+    ///   # Start an interactive conversation
+    ///   pup bits ask --interactive
+    ///
+    ///   # Start interactive with an opening question
+    ///   pup bits ask --interactive "walk me through the recent incidents"
+    ///
     ///   # Target a specific Bits AI agent
     ///   pup bits ask --agent-id <uuid> "show errors in production from the last hour"
     ///
@@ -2959,8 +2965,8 @@ enum AuditLogActions {
 enum BitsActions {
     /// Ask Bits AI a natural-language question
     Ask {
-        /// The question or prompt to send to Bits AI
-        query: String,
+        /// The question or prompt to send to Bits AI (optional with --interactive)
+        query: Option<String>,
         #[arg(
             long,
             help = "Bits AI agent ID (auto-discovered if omitted)"
@@ -2971,6 +2977,12 @@ enum BitsActions {
             help = "Collect the full response before printing (disables streaming)"
         )]
         no_stream: bool,
+        #[arg(
+            long,
+            short = 'i',
+            help = "Start an interactive conversation (Ctrl+D or 'exit' to quit)"
+        )]
+        interactive: bool,
     },
 }
 
@@ -6683,8 +6695,10 @@ async fn main_inner() -> anyhow::Result<()> {
                 query,
                 agent_id,
                 no_stream,
+                interactive,
             } => {
-                commands::bits::ask(&cfg, &query, agent_id, !no_stream).await?;
+                commands::bits::ask(&cfg, query.as_deref(), agent_id, !no_stream, interactive)
+                    .await?;
             }
         },
         // --- Security ---
