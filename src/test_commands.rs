@@ -2524,13 +2524,7 @@ async fn test_llm_obs_datasets_list() {
 
     // Intentionally omits `description` — the field the old typed client required.
     let body = r#"{"data":[{"id":"ds-1","type":"datasets","attributes":{"name":"my-dataset"}}]}"#;
-    let _mock = mock_get(
-        &mut server,
-        "/api/v2/llm-obs/v1/projects/proj-1/datasets",
-        200,
-        body,
-    )
-    .await;
+    let _mock = mock_get(&mut server, "/api/v2/llm-obs/v1/proj-1/datasets", 200, body).await;
 
     let result = crate::commands::llm_obs::datasets_list(&cfg, "proj-1").await;
     assert!(result.is_ok(), "datasets_list failed: {:?}", result.err());
@@ -2544,7 +2538,7 @@ async fn test_llm_obs_datasets_list_403() {
     let cfg = test_config(&server.url());
     let _mock = mock_get(
         &mut server,
-        "/api/v2/llm-obs/v1/projects/proj-1/datasets",
+        "/api/v2/llm-obs/v1/proj-1/datasets",
         403,
         r#"{"errors":["Forbidden"]}"#,
     )
@@ -2569,13 +2563,7 @@ async fn test_llm_obs_datasets_create() {
         r#"{"data":{"type":"datasets","attributes":{"name":"test-dataset"}}}"#,
     );
     let body = r#"{"data":{"id":"ds-1","type":"datasets","attributes":{"name":"test-dataset"}}}"#;
-    let _mock = mock_post(
-        &mut server,
-        "/api/v2/llm-obs/v1/projects/proj-1/datasets",
-        200,
-        body,
-    )
-    .await;
+    let _mock = mock_post(&mut server, "/api/v2/llm-obs/v1/proj-1/datasets", 200, body).await;
 
     let result =
         crate::commands::llm_obs::datasets_create(&cfg, "proj-1", tmp.to_str().unwrap()).await;

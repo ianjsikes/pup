@@ -145,7 +145,7 @@ pub async fn datasets_create(cfg: &Config, project_id: &str, file: &str) -> Resu
     let body: serde_json::Value = util::read_json_file(file)?;
     let resp = client::raw_post(
         cfg,
-        &format!("/api/v2/llm-obs/v1/projects/{project_id}/datasets"),
+        &format!("/api/v2/llm-obs/v1/{project_id}/datasets"),
         body,
     )
     .await
@@ -158,7 +158,7 @@ pub async fn datasets_create(cfg: &Config, project_id: &str, file: &str) -> Resu
     let body: serde_json::Value = crate::util::read_json_file(file)?;
     let data = crate::api::post(
         cfg,
-        &format!("/api/v2/llm-obs/v1/projects/{project_id}/datasets"),
+        &format!("/api/v2/llm-obs/v1/{project_id}/datasets"),
         &body,
     )
     .await?;
@@ -169,7 +169,7 @@ pub async fn datasets_create(cfg: &Config, project_id: &str, file: &str) -> Resu
 pub async fn datasets_list(cfg: &Config, project_id: &str) -> Result<()> {
     let resp = client::raw_get(
         cfg,
-        &format!("/api/v2/llm-obs/v1/projects/{project_id}/datasets"),
+        &format!("/api/v2/llm-obs/v1/{project_id}/datasets"),
         &[],
     )
     .await
@@ -181,7 +181,7 @@ pub async fn datasets_list(cfg: &Config, project_id: &str) -> Result<()> {
 pub async fn datasets_list(cfg: &Config, project_id: &str) -> Result<()> {
     let data = crate::api::get(
         cfg,
-        &format!("/api/v2/llm-obs/v1/projects/{project_id}/datasets"),
+        &format!("/api/v2/llm-obs/v1/{project_id}/datasets"),
         &[],
     )
     .await?;
