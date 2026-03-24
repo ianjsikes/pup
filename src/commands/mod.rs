@@ -7,6 +7,7 @@ pub mod app_builder;
 pub mod app_keys;
 pub mod audit_logs;
 pub mod auth;
+pub mod bits;
 pub mod cases;
 pub mod change_management;
 pub mod cicd;

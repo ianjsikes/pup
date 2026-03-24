@@ -359,6 +359,41 @@ enum Commands {
         #[command(subcommand)]
         action: AuditLogActions,
     },
+    /// Ask Datadog Bits AI a question in natural language
+    ///
+    /// Query your Datadog environment using plain English.
+    ///
+    /// Bits AI answers questions about infrastructure, metrics, logs, traces, and
+    /// incidents by connecting directly to your Datadog account. Responses are
+    /// streamed to the terminal as they arrive.
+    ///
+    /// CAPABILITIES:
+    ///   • Ask questions about your infrastructure, services, and health
+    ///   • Investigate incidents without leaving the terminal
+    ///   • Get summaries of logs, metrics, APM, and more
+    ///   • Use in scripts or remote SSH sessions
+    ///
+    /// EXAMPLES:
+    ///   # Ask a natural-language question (streaming by default)
+    ///   pup bits ask "what's causing high latency in the checkout service?"
+    ///
+    ///   # Summarize current incidents
+    ///   pup bits ask "summarize active incidents"
+    ///
+    ///   # Target a specific Bits AI agent
+    ///   pup bits ask --agent-id <uuid> "show errors in production from the last hour"
+    ///
+    ///   # Disable streaming (collect the full response before printing)
+    ///   pup bits ask --no-stream "which endpoints are slowest?"
+    ///
+    /// AUTHENTICATION:
+    ///   Requires OAuth2 (via 'pup auth login') or a valid API key + Application key.
+    ///   OAuth2 is recommended for interactive use.
+    #[command(verbatim_doc_comment)]
+    Bits {
+        #[command(subcommand)]
+        action: BitsActions,
+    },
     /// OAuth2 authentication commands
     ///
     /// Manage OAuth2 authentication with Datadog.
@@ -2916,6 +2951,26 @@ enum AuditLogActions {
         to: String,
         #[arg(long, default_value_t = 100, help = "Maximum results")]
         limit: i32,
+    },
+}
+
+// ---- Bits AI ----
+#[derive(Subcommand)]
+enum BitsActions {
+    /// Ask Bits AI a natural-language question
+    Ask {
+        /// The question or prompt to send to Bits AI
+        query: String,
+        #[arg(
+            long,
+            help = "Bits AI agent ID (auto-discovered if omitted)"
+        )]
+        agent_id: Option<String>,
+        #[arg(
+            long,
+            help = "Collect the full response before printing (disables streaming)"
+        )]
+        no_stream: bool,
     },
 }
 
@@ -6622,6 +6677,16 @@ async fn main_inner() -> anyhow::Result<()> {
                 }
             }
         }
+        // --- Bits AI ---
+        Commands::Bits { action } => match action {
+            BitsActions::Ask {
+                query,
+                agent_id,
+                no_stream,
+            } => {
+                commands::bits::ask(&cfg, &query, agent_id, !no_stream).await?;
+            }
+        },
         // --- Security ---
         Commands::Security { action } => {
             cfg.validate_auth()?;
