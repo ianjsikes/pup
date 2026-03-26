@@ -189,12 +189,53 @@ const SERVICE_NAME: &str = "pup";
 #[cfg(not(target_arch = "wasm32"))]
 impl KeychainStorage {
     pub fn new() -> Result<Self> {
-        // Test keychain availability by attempting an operation
-        let entry = keyring::Entry::new(SERVICE_NAME, "__pup_test__")?;
-        // Try a read — NotFound is fine, other errors mean keychain is unavailable
+        // Verify the keyring crate can create entries without accessing the keychain.
+        // Actual availability is confirmed on first read/write to avoid spurious macOS
+        // authorization dialogs for a throwaway probe entry.
+        keyring::Entry::new(SERVICE_NAME, "__pup_probe__")
+            .map_err(|e| anyhow::anyhow!("keychain not available: {e}"))?;
+        Ok(Self)
+    }
+}
+
+/// Combined per-site state stored in a single keychain entry.
+/// Consolidating tokens + client credentials into one entry reduces macOS
+/// authorization dialogs from 2 → 1 per site on first access.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+struct SiteData {
+    #[serde(default)]
+    tokens: OrgTokenMap,
+    #[serde(default)]
+    client: Option<ClientCredentials>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl KeychainStorage {
+    fn state_key(site: &str) -> String {
+        format!("state_{}", sanitize(site))
+    }
+
+    fn load_state(&self, site: &str) -> Result<SiteData> {
+        let entry = keyring::Entry::new(SERVICE_NAME, &Self::state_key(site))?;
         match entry.get_password() {
-            Ok(_) | Err(keyring::Error::NoEntry) => Ok(Self),
-            Err(e) => Err(anyhow::anyhow!("keychain not available: {e}")),
+            Ok(json) => Ok(serde_json::from_str(&json).unwrap_or_default()),
+            Err(keyring::Error::NoEntry) => Ok(SiteData::default()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    fn save_state(&self, site: &str, data: &SiteData) -> Result<()> {
+        let entry = keyring::Entry::new(SERVICE_NAME, &Self::state_key(site))?;
+        let json = serde_json::to_string(data)?;
+        entry.set_password(&json).map_err(Into::into)
+    }
+
+    fn delete_state(&self, site: &str) -> Result<()> {
+        let entry = keyring::Entry::new(SERVICE_NAME, &Self::state_key(site))?;
+        match entry.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Err(e) => Err(e.into()),
         }
     }
 }
@@ -210,75 +251,193 @@ impl Storage for KeychainStorage {
     }
 
     fn save_tokens(&self, site: &str, org: Option<&str>, tokens: &TokenSet) -> Result<()> {
-        let key = format!("tokens_{}", sanitize(site));
-        let entry = keyring::Entry::new(SERVICE_NAME, &key)?;
-        let mut map = match entry.get_password() {
-            Ok(json) => parse_token_map(&json).unwrap_or_default(),
-            Err(keyring::Error::NoEntry) => OrgTokenMap::new(),
-            Err(e) => return Err(e.into()),
-        };
-        map.insert(org_map_key(org).to_string(), tokens.clone());
-        let json = serde_json::to_string(&map)?;
-        entry.set_password(&json)?;
-        Ok(())
+        let mut data = self.load_state(site)?;
+        data.tokens
+            .insert(org_map_key(org).to_string(), tokens.clone());
+        self.save_state(site, &data)
     }
 
     fn load_tokens(&self, site: &str, org: Option<&str>) -> Result<Option<TokenSet>> {
-        let key = format!("tokens_{}", sanitize(site));
-        let entry = keyring::Entry::new(SERVICE_NAME, &key)?;
-        match entry.get_password() {
-            Ok(json) => Ok(parse_token_map(&json)?.remove(org_map_key(org))),
-            Err(keyring::Error::NoEntry) => Ok(None),
-            Err(e) => Err(e.into()),
-        }
+        Ok(self.load_state(site)?.tokens.remove(org_map_key(org)))
     }
 
     fn delete_tokens(&self, site: &str, org: Option<&str>) -> Result<()> {
-        let key = format!("tokens_{}", sanitize(site));
-        let entry = keyring::Entry::new(SERVICE_NAME, &key)?;
-        let json = match entry.get_password() {
-            Ok(j) => j,
-            Err(keyring::Error::NoEntry) => return Ok(()),
-            Err(e) => return Err(e.into()),
-        };
-        let mut map = parse_token_map(&json).unwrap_or_default();
-        map.remove(org_map_key(org));
-        if map.is_empty() {
-            match entry.delete_credential() {
-                Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-                Err(e) => Err(e.into()),
-            }
+        let mut data = self.load_state(site)?;
+        data.tokens.remove(org_map_key(org));
+        if data.tokens.is_empty() && data.client.is_none() {
+            self.delete_state(site)
         } else {
-            let json = serde_json::to_string(&map)?;
-            entry.set_password(&json)?;
-            Ok(())
+            self.save_state(site, &data)
         }
     }
 
     fn save_client_credentials(&self, site: &str, creds: &ClientCredentials) -> Result<()> {
-        let key = format!("client_{}", sanitize(site));
-        let entry = keyring::Entry::new(SERVICE_NAME, &key)?;
-        let json = serde_json::to_string(creds)?;
-        entry.set_password(&json)?;
-        Ok(())
+        let mut data = self.load_state(site)?;
+        data.client = Some(creds.clone());
+        self.save_state(site, &data)
     }
 
     fn load_client_credentials(&self, site: &str) -> Result<Option<ClientCredentials>> {
-        let key = format!("client_{}", sanitize(site));
-        let entry = keyring::Entry::new(SERVICE_NAME, &key)?;
-        match entry.get_password() {
-            Ok(json) => Ok(Some(serde_json::from_str(&json)?)),
-            Err(keyring::Error::NoEntry) => Ok(None),
-            Err(e) => Err(e.into()),
-        }
+        Ok(self.load_state(site)?.client)
     }
 
     fn delete_client_credentials(&self, site: &str) -> Result<()> {
-        let key = format!("client_{}", sanitize(site));
-        let entry = keyring::Entry::new(SERVICE_NAME, &key)?;
-        match entry.delete_credential() {
-            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
-            Err(e) => Err(e.into()),
+        let mut data = self.load_state(site)?;
+        data.client = None;
+        if data.tokens.is_empty() && data.client.is_none() {
+            self.delete_state(site)
+        } else {
+            self.save_state(site, &data)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Touch ID keychain storage — macOS only
+//
+// Uses the modern SecItemAdd/SecItemCopyMatching API (not the legacy
+// SecKeychain API that the `keyring` crate uses) so that macOS presents
+// Touch ID as the authentication method instead of a password dialog.
+//
+// Access control: kSecAccessControlUserPresence — macOS offers Touch ID
+// first, falling back to the login password if Touch ID is unavailable or
+// the user cancels. The prompt appears on every keychain access.
+//
+// Requires the binary to be code-signed (standard for Homebrew releases).
+// If the binary is unsigned (e.g. a local dev build), Touch ID access
+// control silently degrades to a standard keychain item so the tool
+// remains functional.
+// ---------------------------------------------------------------------------
+
+#[cfg(target_os = "macos")]
+pub struct TouchIdStorage;
+
+/// errSecMissingEntitlement (-34018): thrown by SecItemAdd when using
+/// biometric access control on an unsigned binary.
+#[cfg(target_os = "macos")]
+const ERR_MISSING_ENTITLEMENT: i32 = -34018;
+
+#[cfg(target_os = "macos")]
+impl TouchIdStorage {
+    pub fn new() -> Self {
+        Self
+    }
+
+    fn load_state(&self, site: &str) -> Result<SiteData> {
+        use security_framework::passwords::{generic_password, PasswordOptions};
+        use security_framework_sys::base::errSecItemNotFound;
+
+        let opts =
+            PasswordOptions::new_generic_password(SERVICE_NAME, &KeychainStorage::state_key(site));
+        match generic_password(opts) {
+            Ok(bytes) => Ok(serde_json::from_slice(&bytes).unwrap_or_default()),
+            Err(e) if e.code() == errSecItemNotFound => Ok(SiteData::default()),
+            Err(e) => Err(anyhow::anyhow!("keychain read failed: {e}")),
+        }
+    }
+
+    fn save_state(&self, site: &str, data: &SiteData) -> Result<()> {
+        use security_framework::passwords::{
+            delete_generic_password_options, set_generic_password_options, AccessControlOptions,
+            PasswordOptions,
+        };
+        use security_framework_sys::base::errSecDuplicateItem;
+
+        let json = serde_json::to_vec(data)?;
+        let key = KeychainStorage::state_key(site);
+
+        // Attempt 1: create with Touch ID access control.
+        let mut opts = PasswordOptions::new_generic_password(SERVICE_NAME, &key);
+        opts.set_access_control_options(AccessControlOptions::USER_PRESENCE);
+        match set_generic_password_options(&json, opts) {
+            Ok(()) => return Ok(()),
+            // Duplicate item — delete and re-create to apply access control.
+            Err(ref e) if e.code() == errSecDuplicateItem => {
+                let del_opts = PasswordOptions::new_generic_password(SERVICE_NAME, &key);
+                delete_generic_password_options(del_opts).ok();
+
+                let mut opts2 = PasswordOptions::new_generic_password(SERVICE_NAME, &key);
+                opts2.set_access_control_options(AccessControlOptions::USER_PRESENCE);
+                match set_generic_password_options(&json, opts2) {
+                    Ok(()) => return Ok(()),
+                    // Still no entitlement after re-create — fall through to plain write.
+                    Err(ref e) if e.code() == ERR_MISSING_ENTITLEMENT => {}
+                    Err(e) => return Err(anyhow::anyhow!("keychain write failed: {e}")),
+                }
+            }
+            // Binary not code-signed: degrade gracefully to a plain item.
+            Err(ref e) if e.code() == ERR_MISSING_ENTITLEMENT => {}
+            Err(e) => return Err(anyhow::anyhow!("keychain write failed: {e}")),
+        }
+
+        // Attempt 2: write without access control (unsigned binary fallback).
+        let opts = PasswordOptions::new_generic_password(SERVICE_NAME, &key);
+        set_generic_password_options(&json, opts)
+            .map_err(|e| anyhow::anyhow!("keychain write failed: {e}"))
+    }
+
+    fn delete_state(&self, site: &str) -> Result<()> {
+        use security_framework::passwords::{delete_generic_password_options, PasswordOptions};
+        use security_framework_sys::base::errSecItemNotFound;
+
+        let opts =
+            PasswordOptions::new_generic_password(SERVICE_NAME, &KeychainStorage::state_key(site));
+        match delete_generic_password_options(opts) {
+            Ok(()) => Ok(()),
+            Err(e) if e.code() == errSecItemNotFound => Ok(()),
+            Err(e) => Err(anyhow::anyhow!("keychain delete failed: {e}")),
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+impl Storage for TouchIdStorage {
+    fn backend_type(&self) -> BackendType {
+        BackendType::Keychain
+    }
+
+    fn storage_location(&self) -> String {
+        "OS keychain (Touch ID)".to_string()
+    }
+
+    fn save_tokens(&self, site: &str, org: Option<&str>, tokens: &TokenSet) -> Result<()> {
+        let mut data = self.load_state(site)?;
+        data.tokens
+            .insert(org_map_key(org).to_string(), tokens.clone());
+        self.save_state(site, &data)
+    }
+
+    fn load_tokens(&self, site: &str, org: Option<&str>) -> Result<Option<TokenSet>> {
+        Ok(self.load_state(site)?.tokens.remove(org_map_key(org)))
+    }
+
+    fn delete_tokens(&self, site: &str, org: Option<&str>) -> Result<()> {
+        let mut data = self.load_state(site)?;
+        data.tokens.remove(org_map_key(org));
+        if data.tokens.is_empty() && data.client.is_none() {
+            self.delete_state(site)
+        } else {
+            self.save_state(site, &data)
+        }
+    }
+
+    fn save_client_credentials(&self, site: &str, creds: &ClientCredentials) -> Result<()> {
+        let mut data = self.load_state(site)?;
+        data.client = Some(creds.clone());
+        self.save_state(site, &data)
+    }
+
+    fn load_client_credentials(&self, site: &str) -> Result<Option<ClientCredentials>> {
+        Ok(self.load_state(site)?.client)
+    }
+
+    fn delete_client_credentials(&self, site: &str) -> Result<()> {
+        let mut data = self.load_state(site)?;
+        data.client = None;
+        if data.tokens.is_empty() && data.client.is_none() {
+            self.delete_state(site)
+        } else {
+            self.save_state(site, &data)
         }
     }
 }
@@ -457,7 +616,12 @@ fn detect_backend() -> Box<dyn Storage> {
         }
     }
 
-    // Try keychain first
+    // On macOS, use Touch ID-capable storage by default.
+    // On other platforms, fall back to the keyring-based backend.
+    #[cfg(target_os = "macos")]
+    return Box::new(TouchIdStorage::new());
+
+    #[cfg(not(target_os = "macos"))]
     match KeychainStorage::new() {
         Ok(ks) => Box::new(ks),
         Err(_) => {
