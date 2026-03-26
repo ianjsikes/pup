@@ -22,8 +22,8 @@ pub struct AggregateArgs {
     pub query: String,
     pub from: String,
     pub to: String,
-    pub compute: String,
-    pub group_by: Option<String>,
+    pub compute: Vec<String>,
+    pub group_by: Vec<String>,
     pub limit: i32,
     pub storage: Option<String>,
 }
@@ -54,6 +54,39 @@ fn parse_storage_tier(storage: Option<String>) -> Result<Option<LogsStorageTier>
             _ => unreachable!("storage tier is normalized"),
         },
     }
+}
+
+/// Split a comma-separated compute string into individual compute expressions,
+/// respecting parentheses so that `percentile(@duration, 95)` is not split.
+pub fn split_compute_args(input: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut current = String::new();
+    let mut depth = 0u32;
+    for ch in input.chars() {
+        match ch {
+            '(' => {
+                depth += 1;
+                current.push(ch);
+            }
+            ')' => {
+                depth = depth.saturating_sub(1);
+                current.push(ch);
+            }
+            ',' if depth == 0 => {
+                let trimmed = current.trim().to_string();
+                if !trimmed.is_empty() {
+                    result.push(trimmed);
+                }
+                current.clear();
+            }
+            _ => current.push(ch),
+        }
+    }
+    let trimmed = current.trim().to_string();
+    if !trimmed.is_empty() {
+        result.push(trimmed);
+    }
+    result
 }
 
 fn parse_compute_raw(input: &str) -> Result<(String, Option<String>)> {
@@ -110,12 +143,11 @@ fn build_aggregate_body(
     query: String,
     from_ms: i64,
     to_ms: i64,
-    compute: String,
-    group_by: Option<String>,
+    computes: Vec<String>,
+    group_bys: Vec<String>,
     limit: i32,
     storage: Option<String>,
 ) -> Result<serde_json::Value> {
-    let (aggregation, metric) = parse_compute_raw(&compute)?;
     let storage_tier = normalize_storage_tier(storage)?;
 
     let mut filter = serde_json::json!({
@@ -127,22 +159,35 @@ fn build_aggregate_body(
         filter["storage_tier"] = serde_json::Value::String(tier);
     }
 
-    let mut compute_obj = serde_json::json!({ "aggregation": aggregation });
-    if let Some(metric) = metric {
-        compute_obj["metric"] = serde_json::Value::String(metric);
-    }
+    let compute_arr: Vec<serde_json::Value> = computes
+        .iter()
+        .map(|c| {
+            let (aggregation, metric) = parse_compute_raw(c)?;
+            let mut obj = serde_json::json!({ "aggregation": aggregation });
+            if let Some(m) = metric {
+                obj["metric"] = serde_json::Value::String(m);
+            }
+            Ok(obj)
+        })
+        .collect::<Result<Vec<_>>>()?;
 
     let mut body = serde_json::json!({
         "filter": filter,
-        "compute": [compute_obj]
+        "compute": compute_arr
     });
 
-    if let Some(facet) = group_by {
-        let mut group_by_obj = serde_json::json!({ "facet": facet });
-        if limit > 0 {
-            group_by_obj["limit"] = serde_json::json!(limit);
-        }
-        body["group_by"] = serde_json::json!([group_by_obj]);
+    if !group_bys.is_empty() {
+        let group_by_arr: Vec<serde_json::Value> = group_bys
+            .iter()
+            .map(|facet| {
+                let mut obj = serde_json::json!({ "facet": facet });
+                if limit > 0 {
+                    obj["limit"] = serde_json::json!(limit);
+                }
+                obj
+            })
+            .collect();
+        body["group_by"] = serde_json::json!(group_by_arr);
     }
 
     Ok(body)
@@ -285,11 +330,14 @@ pub async fn aggregate(cfg: &Config, args: AggregateArgs) -> Result<()> {
         query,
         from,
         to,
-        compute,
+        mut compute,
         group_by,
         limit,
         storage,
     } = args;
+    if compute.is_empty() {
+        compute.push("count".into());
+    }
     let from_ms = util::parse_time_to_unix_millis(&from)?;
     let to_ms = util::parse_time_to_unix_millis(&to)?;
     let body = build_aggregate_body(query, from_ms, to_ms, compute, group_by, limit, storage)?;
@@ -304,11 +352,14 @@ pub async fn aggregate(cfg: &Config, args: AggregateArgs) -> Result<()> {
         query,
         from,
         to,
-        compute,
+        mut compute,
         group_by,
         limit,
         storage,
     } = args;
+    if compute.is_empty() {
+        compute.push("count".into());
+    }
     let from_ms = util::parse_time_to_unix_millis(&from)?;
     let to_ms = util::parse_time_to_unix_millis(&to)?;
     let body = build_aggregate_body(query, from_ms, to_ms, compute, group_by, limit, storage)?;
@@ -626,7 +677,7 @@ mod tests {
 
     #[test]
     fn test_parse_compute_unsupported_percentile() {
-        assert!(parse_compute_raw("percentile(@duration, 50)").is_err());
+        assert!(parse_compute_raw("percentile(@duration, 42)").is_err());
     }
 
     #[test]
@@ -652,8 +703,8 @@ mod tests {
             "service:web".into(),
             1,
             2,
-            "avg(@duration)".into(),
-            Some("service".into()),
+            vec!["avg(@duration)".into()],
+            vec!["service".into()],
             3,
             Some("flex".into()),
         )
@@ -682,7 +733,8 @@ mod tests {
 
     #[test]
     fn test_build_aggregate_body_omits_group_by_for_plain_count() {
-        let body = build_aggregate_body("*".into(), 1, 2, "count".into(), None, 10, None).unwrap();
+        let body =
+            build_aggregate_body("*".into(), 1, 2, vec!["count".into()], vec![], 10, None).unwrap();
 
         assert_eq!(
             body,
@@ -697,5 +749,103 @@ mod tests {
                 }]
             })
         );
+    }
+
+    #[test]
+    fn test_build_aggregate_body_multiple_computes() {
+        let body = build_aggregate_body(
+            "*".into(),
+            1,
+            2,
+            vec![
+                "count".into(),
+                "avg(@duration)".into(),
+                "percentile(@duration, 95)".into(),
+            ],
+            vec![],
+            10,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(
+            body,
+            serde_json::json!({
+                "filter": {
+                    "query": "*",
+                    "from": "1",
+                    "to": "2"
+                },
+                "compute": [
+                    { "aggregation": "count" },
+                    { "aggregation": "avg", "metric": "@duration" },
+                    { "aggregation": "pc95", "metric": "@duration" }
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn test_build_aggregate_body_multiple_group_bys() {
+        let body = build_aggregate_body(
+            "*".into(),
+            1,
+            2,
+            vec!["count".into()],
+            vec!["service".into(), "status".into()],
+            5,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(
+            body,
+            serde_json::json!({
+                "filter": {
+                    "query": "*",
+                    "from": "1",
+                    "to": "2"
+                },
+                "compute": [{ "aggregation": "count" }],
+                "group_by": [
+                    { "facet": "service", "limit": 5 },
+                    { "facet": "status", "limit": 5 }
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn test_split_compute_args_single() {
+        assert_eq!(split_compute_args("count"), vec!["count"]);
+    }
+
+    #[test]
+    fn test_split_compute_args_multiple() {
+        assert_eq!(
+            split_compute_args("count,avg(@duration),max(@duration)"),
+            vec!["count", "avg(@duration)", "max(@duration)"]
+        );
+    }
+
+    #[test]
+    fn test_split_compute_args_preserves_parens_with_comma() {
+        assert_eq!(
+            split_compute_args("count,percentile(@duration, 95)"),
+            vec!["count", "percentile(@duration, 95)"]
+        );
+    }
+
+    #[test]
+    fn test_split_compute_args_trims_whitespace() {
+        assert_eq!(
+            split_compute_args(" count , avg(@duration) "),
+            vec!["count", "avg(@duration)"]
+        );
+    }
+
+    #[test]
+    fn test_split_compute_args_empty() {
+        assert!(split_compute_args("").is_empty());
     }
 }

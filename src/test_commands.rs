@@ -426,14 +426,44 @@ async fn test_logs_aggregate() {
             query: "*".into(),
             from: "1h".into(),
             to: "now".into(),
-            compute: "count".into(),
-            group_by: None,
+            compute: vec!["count".into()],
+            group_by: vec![],
             limit: 10,
             storage: None,
         },
     )
     .await;
     assert!(result.is_ok(), "logs aggregate failed: {:?}", result.err());
+    cleanup_env();
+}
+
+#[tokio::test]
+async fn test_logs_aggregate_multiple_computes() {
+    let _lock = lock_env();
+    let mut server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let _mock = mock_any(&mut server, "POST", r#"{"data": {"buckets": []}}"#).await;
+
+    let result = crate::commands::logs::aggregate(
+        &cfg,
+        crate::commands::logs::AggregateArgs {
+            query: "*".into(),
+            from: "1h".into(),
+            to: "now".into(),
+            compute: crate::commands::logs::split_compute_args(
+                "count,avg(@duration),percentile(@duration, 95)",
+            ),
+            group_by: vec!["service".into(), "status".into()],
+            limit: 10,
+            storage: None,
+        },
+    )
+    .await;
+    assert!(
+        result.is_ok(),
+        "logs aggregate with multiple computes failed: {:?}",
+        result.err()
+    );
     cleanup_env();
 }
 
@@ -530,8 +560,8 @@ async fn test_logs_aggregate_with_flex_storage() {
             query: "*".into(),
             from: "1h".into(),
             to: "now".into(),
-            compute: "count".into(),
-            group_by: None,
+            compute: vec!["count".into()],
+            group_by: vec![],
             limit: 10,
             storage: Some("flex".into()),
         },

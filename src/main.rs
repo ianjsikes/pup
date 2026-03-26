@@ -1182,6 +1182,12 @@ enum Commands {
     ///   # Aggregate logs by status
     ///   pup logs aggregate --query="*" --compute="count" --group-by="status"
     ///
+    ///   # Multiple computes in one query (comma-separated)
+    ///   pup logs aggregate --query="*" --compute="count,avg(@duration),percentile(@duration, 95)"
+    ///
+    ///   # Multiple group-by dimensions (comma-separated)
+    ///   pup logs aggregate --query="*" --compute="count" --group-by="service,status"
+    ///
     ///   # List log archives
     ///   pup logs archives list
     ///
@@ -2137,11 +2143,18 @@ enum LogActions {
         from: String,
         #[arg(long, default_value = "now", help = "End time")]
         to: String,
-        #[arg(long, default_value = "count", help = "Metric to compute")]
+        #[arg(
+            long,
+            default_value = "count",
+            help = "Metrics to compute (comma-separated, e.g. count,avg(@duration),percentile(@duration, 95))"
+        )]
         compute: String,
-        #[arg(long, help = "Field to group by")]
+        #[arg(
+            long,
+            help = "Fields to group by (comma-separated, e.g. service,status)"
+        )]
         group_by: Option<String>,
-        #[arg(long, default_value_t = 10, help = "Maximum groups")]
+        #[arg(long, default_value_t = 10, help = "Maximum groups per facet")]
         limit: i32,
         #[arg(long, help = "Storage tier: indexes, online-archives, or flex")]
         storage: Option<String>,
@@ -6337,8 +6350,15 @@ async fn main_inner() -> anyhow::Result<()> {
                             query: query.unwrap_or_default(),
                             from,
                             to,
-                            compute,
-                            group_by,
+                            compute: commands::logs::split_compute_args(&compute),
+                            group_by: group_by
+                                .map(|g| {
+                                    g.split(',')
+                                        .map(|s| s.trim().to_string())
+                                        .filter(|s| !s.is_empty())
+                                        .collect()
+                                })
+                                .unwrap_or_default(),
                             limit,
                             storage,
                         },

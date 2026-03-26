@@ -128,6 +128,13 @@ pup logs aggregate \
   --from="30m" \
   --compute="percentile(@duration, 99)" \
   --group-by="service"
+
+# Multiple metrics in one query (comma-separated)
+pup logs aggregate \
+  --query="service:web-app" \
+  --from="1h" \
+  --compute="count,avg(@duration),percentile(@duration, 95)" \
+  --group-by="service,status"
 ```
 
 ### Search Logs in Specific Storage Tier
