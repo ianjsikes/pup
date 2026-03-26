@@ -327,7 +327,8 @@ impl TouchIdStorage {
         use security_framework::passwords::{generic_password, PasswordOptions};
         use security_framework_sys::base::errSecItemNotFound;
 
-        let opts = PasswordOptions::new_generic_password(SERVICE_NAME, &KeychainStorage::state_key(site));
+        let opts =
+            PasswordOptions::new_generic_password(SERVICE_NAME, &KeychainStorage::state_key(site));
         match generic_password(opts) {
             Ok(bytes) => Ok(serde_json::from_slice(&bytes).unwrap_or_default()),
             Err(e) if e.code() == errSecItemNotFound => Ok(SiteData::default()),
@@ -379,7 +380,8 @@ impl TouchIdStorage {
         use security_framework::passwords::{delete_generic_password_options, PasswordOptions};
         use security_framework_sys::base::errSecItemNotFound;
 
-        let opts = PasswordOptions::new_generic_password(SERVICE_NAME, &KeychainStorage::state_key(site));
+        let opts =
+            PasswordOptions::new_generic_password(SERVICE_NAME, &KeychainStorage::state_key(site));
         match delete_generic_password_options(opts) {
             Ok(()) => Ok(()),
             Err(e) if e.code() == errSecItemNotFound => Ok(()),
