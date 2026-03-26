@@ -643,7 +643,7 @@ pub async fn register(cfg: &Config, file: &str) -> Result<()> {
         std::fs::read_to_string(file).map_err(|e| anyhow::anyhow!("failed to read {file}: {e}"))?;
 
     // Parse YAML to JSON for the API
-    let yaml_value: serde_json::Value = serde_yml::from_str(&content)
+    let yaml_value: serde_json::Value = serde_norway::from_str(&content)
         .map_err(|e| anyhow::anyhow!("failed to parse YAML in {file}: {e}"))?;
 
     let data = client::raw_post(cfg, "/api/v2/services/definitions", yaml_value).await?;

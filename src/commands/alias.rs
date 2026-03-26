@@ -12,7 +12,7 @@ fn aliases_path() -> Result<PathBuf> {
 fn load_aliases() -> Result<BTreeMap<String, String>> {
     let path = aliases_path()?;
     match std::fs::read_to_string(&path) {
-        Ok(contents) => Ok(serde_yml::from_str(&contents).unwrap_or_default()),
+        Ok(contents) => Ok(serde_norway::from_str(&contents).unwrap_or_default()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(BTreeMap::new()),
         Err(e) => Err(e.into()),
     }
@@ -23,7 +23,7 @@ fn save_aliases(aliases: &BTreeMap<String, String>) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let yaml = serde_yml::to_string(aliases)?;
+    let yaml = serde_norway::to_string(aliases)?;
     std::fs::write(&path, yaml)?;
     Ok(())
 }
@@ -80,7 +80,7 @@ pub fn import(file: &str) -> Result<()> {
         serde_json::from_str(&contents)
             .with_context(|| format!("failed to parse JSON from {file}"))?
     } else {
-        serde_yml::from_str(&contents)
+        serde_norway::from_str(&contents)
             .with_context(|| format!("failed to parse YAML from {file}"))?
     };
 

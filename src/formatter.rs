@@ -99,7 +99,7 @@ pub fn print_json<T: Serialize>(data: &T) -> Result<()> {
 
 fn print_yaml<T: Serialize>(data: &T) -> Result<()> {
     let sorted_data = sort_json_value(serde_json::to_value(data)?);
-    let yaml = serde_yml::to_string(&sorted_data)?;
+    let yaml = serde_norway::to_string(&sorted_data)?;
     print!("{yaml}");
     Ok(())
 }

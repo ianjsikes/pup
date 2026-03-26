@@ -235,7 +235,7 @@ pub fn config_dir() -> Option<PathBuf> {
 fn load_config_file() -> Option<FileConfig> {
     let path = config_dir()?.join("config.yaml");
     let contents = std::fs::read_to_string(path).ok()?;
-    serde_yml::from_str(&contents).ok()
+    serde_norway::from_str(&contents).ok()
 }
 
 /// Load configured login scopes for a given org profile from the config file.
@@ -653,7 +653,7 @@ mod tests {
     #[test]
     fn test_file_config_read_only() {
         let yaml = "read_only: true\n";
-        let fc: FileConfig = serde_yml::from_str(yaml).unwrap();
+        let fc: FileConfig = serde_norway::from_str(yaml).unwrap();
         assert_eq!(fc.read_only, Some(true));
     }
 
@@ -718,7 +718,7 @@ profiles:
   read-only-org:
     scopes: dashboards_read,metrics_read
 "#;
-        let fc: FileConfig = serde_yml::from_str(yaml).unwrap();
+        let fc: FileConfig = serde_norway::from_str(yaml).unwrap();
         let profiles = fc.profiles.unwrap();
         assert_eq!(
             profiles["my-org"].scopes.as_deref(),
@@ -733,7 +733,7 @@ profiles:
     #[test]
     fn test_file_config_top_level_scopes() {
         let yaml = "scopes: dashboards_read,monitors_read\n";
-        let fc: FileConfig = serde_yml::from_str(yaml).unwrap();
+        let fc: FileConfig = serde_norway::from_str(yaml).unwrap();
         assert_eq!(fc.scopes.as_deref(), Some("dashboards_read,monitors_read"));
     }
 
