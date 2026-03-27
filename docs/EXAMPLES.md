@@ -296,6 +296,29 @@ pup apm troubleshooting list --hostname my-host
 pup apm troubleshooting list --hostname my-host --timeframe 4h
 ```
 
+## Containers
+
+### List Containers
+```bash
+# List all containers
+pup containers list
+
+# Filter by tags
+pup containers list --filter-tags="env:production"
+
+# Group by image
+pup containers list --group-by="image_name"
+```
+
+### List Container Images
+```bash
+# List all container images
+pup containers images list
+
+# Filter images by tags
+pup containers images list --filter-tags="env:production"
+```
+
 ## Infrastructure
 
 ### List Hosts
