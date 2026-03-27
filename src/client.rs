@@ -220,6 +220,8 @@ static UNSTABLE_OPS: &[&str] = &[
 // Auth type detection
 // ---------------------------------------------------------------------------
 
+use crate::useragent;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuthType {
@@ -506,7 +508,11 @@ pub async fn raw_get(
         req = req.query(query);
     }
 
-    let resp = req.header("Accept", "application/json").send().await?;
+    let resp = req
+        .header("Accept", "application/json")
+        .header("User-Agent", useragent::get())
+        .send()
+        .await?;
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
@@ -539,6 +545,7 @@ pub async fn raw_patch(
     let resp = req
         .header("Content-Type", "application/json")
         .header("Accept", "application/json")
+        .header("User-Agent", useragent::get())
         .json(&body)
         .send()
         .await?;
@@ -574,6 +581,7 @@ pub async fn raw_post(
     let resp = req
         .header("Content-Type", "application/json")
         .header("Accept", "application/json")
+        .header("User-Agent", useragent::get())
         .json(&body)
         .send()
         .await?;
