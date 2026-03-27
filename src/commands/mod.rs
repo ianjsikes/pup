@@ -15,6 +15,7 @@ pub mod cloud_auth;
 pub mod code_coverage;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod completions;
+pub mod containers;
 pub mod cost;
 pub mod dashboards;
 pub mod data_governance;

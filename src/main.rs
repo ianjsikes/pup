@@ -657,6 +657,31 @@ enum Commands {
         #[arg(long)]
         install: bool,
     },
+    /// Query running containers and container images
+    ///
+    /// List and filter containers and container images monitored by Datadog.
+    ///
+    /// CAPABILITIES:
+    ///   • List running containers with filtering and grouping
+    ///   • List container images with filtering and grouping
+    ///
+    /// EXAMPLES:
+    ///   # List all containers
+    ///   pup containers list
+    ///
+    ///   # List containers filtered by tag
+    ///   pup containers list --filter-tags="env:production"
+    ///
+    ///   # List container images
+    ///   pup containers images list
+    ///
+    /// AUTHENTICATION:
+    ///   Requires OAuth2 (via 'pup auth login') or valid API + Application keys.
+    #[command(verbatim_doc_comment)]
+    Containers {
+        #[command(subcommand)]
+        action: ContainerActions,
+    },
     /// Manage cost and billing data
     ///
     /// Query cost management and billing information.
@@ -4650,6 +4675,50 @@ enum WebhooksActions {
     List,
 }
 
+// ---- Containers ----
+#[derive(Subcommand)]
+enum ContainerActions {
+    /// List running containers
+    List {
+        /// Comma-separated list of tags to filter containers by
+        #[arg(long)]
+        filter_tags: Option<String>,
+        /// Comma-separated list of tags to group containers by
+        #[arg(long)]
+        group_by: Option<String>,
+        /// Attribute to sort containers by
+        #[arg(long)]
+        sort: Option<String>,
+        /// Maximum number of results returned
+        #[arg(long)]
+        page_size: Option<i32>,
+    },
+    /// Manage container images
+    Images {
+        #[command(subcommand)]
+        action: ContainerImageActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum ContainerImageActions {
+    /// List container images
+    List {
+        /// Comma-separated list of tags to filter container images by
+        #[arg(long)]
+        filter_tags: Option<String>,
+        /// Comma-separated list of tags to group container images by
+        #[arg(long)]
+        group_by: Option<String>,
+        /// Attribute to sort container images by
+        #[arg(long)]
+        sort: Option<String>,
+        /// Maximum number of results returned
+        #[arg(long)]
+        page_size: Option<i32>,
+    },
+}
+
 // ---- Cost ----
 #[derive(Subcommand)]
 enum CostActions {
@@ -7803,6 +7872,38 @@ async fn main_inner() -> anyhow::Result<()> {
                             }
                         },
                     },
+                },
+            }
+        }
+        // --- Containers ---
+        Commands::Containers { action } => {
+            cfg.validate_auth()?;
+            match action {
+                ContainerActions::List {
+                    filter_tags,
+                    group_by,
+                    sort,
+                    page_size,
+                } => {
+                    commands::containers::list(&cfg, filter_tags, group_by, sort, page_size)
+                        .await?;
+                }
+                ContainerActions::Images { action } => match action {
+                    ContainerImageActions::List {
+                        filter_tags,
+                        group_by,
+                        sort,
+                        page_size,
+                    } => {
+                        commands::containers::images_list(
+                            &cfg,
+                            filter_tags,
+                            group_by,
+                            sort,
+                            page_size,
+                        )
+                        .await?;
+                    }
                 },
             }
         }

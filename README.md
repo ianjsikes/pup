@@ -41,7 +41,7 @@ pup metrics query --query="avg:system.cpu.user{*}"   # Track the metrics tail
 
 <!-- Last updated: 2026-03-17 | API Client: datadog-api-client-rust v0.28 -->
 
-Pup implements **52 of 85+ available Datadog APIs** (61% coverage) with **320+ subcommands** across **56 command groups**.
+Pup implements **54 of 85+ available Datadog APIs** (63% coverage) with **320+ subcommands** across **57 command groups**.
 
 See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 
@@ -101,7 +101,7 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 </details>
 
 <details>
-<summary><b>☁️ Infrastructure & Cloud (7/9 implemented)</b></summary>
+<summary><b>☁️ Infrastructure & Cloud (8/9 implemented)</b></summary>
 
 | API Domain | Status | Pup Commands | Notes |
 |------------|--------|--------------|-------|
@@ -112,7 +112,7 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 | Cloud (GCP) | ✅ | `cloud gcp list` | GCP integration management |
 | Cloud (Azure) | ✅ | `cloud azure list` | Azure integration management |
 | Cloud (OCI) | ✅ | `cloud oci` | **New** — Oracle Cloud tenancy configs and products |
-| Containers | ❌ | - | Not yet implemented |
+| Containers | ✅ | `containers list`, `containers images list` | Containers |
 | Processes | ❌ | - | Not yet implemented |
 
 </details>
