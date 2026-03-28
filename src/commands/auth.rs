@@ -14,7 +14,6 @@ where
     f(&mut **store)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn login(cfg: &Config, scopes: Vec<String>) -> Result<()> {
     use crate::auth::{dcr, pkce};
 
@@ -120,16 +119,6 @@ pub async fn login(cfg: &Config, scopes: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn login(_cfg: &Config, _scopes: Vec<String>) -> Result<()> {
-    bail!(
-        "OAuth login is not available in WASM builds.\n\
-         Use DD_ACCESS_TOKEN env var for bearer token auth,\n\
-         or DD_API_KEY + DD_APP_KEY for API key auth."
-    )
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn logout(cfg: &Config) -> Result<()> {
     let site = &cfg.site;
     let org = cfg.org.as_deref();
@@ -148,30 +137,11 @@ pub async fn logout(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn logout(_cfg: &Config) -> Result<()> {
-    bail!(
-        "OAuth logout is not available in WASM builds.\n\
-         Token storage is not available — credentials are read from environment variables."
-    )
-}
-
 pub fn status(cfg: &Config) -> Result<()> {
     let site = &cfg.site;
     let org = cfg.org.as_deref();
 
     // In WASM, just report env var status
-    #[cfg(target_arch = "wasm32")]
-    {
-        if cfg.has_bearer_token() || cfg.has_api_keys() {
-            println!("✅ Authenticated for site: {site}");
-        } else {
-            println!("❌ Not authenticated for site: {site}");
-        }
-        return Ok(());
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
     with_storage(|store| {
         match store.load_tokens(site, org)? {
             Some(tokens) => {
@@ -240,27 +210,20 @@ pub fn token(cfg: &Config) -> Result<()> {
         return Ok(());
     }
 
-    #[cfg(target_arch = "wasm32")]
-    bail!("no token available — set DD_ACCESS_TOKEN env var");
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let site = &cfg.site;
-        let org = cfg.org.as_deref();
-        with_storage(|store| match store.load_tokens(site, org)? {
-            Some(tokens) => {
-                if tokens.is_expired() {
-                    bail!("token is expired — run 'pup auth login' to refresh");
-                }
-                println!("{}", tokens.access_token);
-                Ok(())
+    let site = &cfg.site;
+    let org = cfg.org.as_deref();
+    with_storage(|store| match store.load_tokens(site, org)? {
+        Some(tokens) => {
+            if tokens.is_expired() {
+                bail!("token is expired — run 'pup auth login' to refresh");
             }
-            None => bail!("no token available — run 'pup auth login' or set DD_ACCESS_TOKEN"),
-        })
-    }
+            println!("{}", tokens.access_token);
+            Ok(())
+        }
+        None => bail!("no token available — run 'pup auth login' or set DD_ACCESS_TOKEN"),
+    })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn refresh(cfg: &Config) -> Result<()> {
     use crate::auth::dcr;
 
@@ -304,16 +267,7 @@ pub async fn refresh(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn refresh(_cfg: &Config) -> Result<()> {
-    bail!(
-        "Token refresh is not available in WASM builds.\n\
-         Use DD_ACCESS_TOKEN env var for bearer token auth."
-    )
-}
-
 /// List all stored org sessions from the session registry, enriched with token status.
-#[cfg(not(target_arch = "wasm32"))]
 pub fn list(cfg: &Config) -> Result<()> {
     let sessions = storage::list_sessions()?;
 
@@ -359,12 +313,4 @@ pub fn list(cfg: &Config) -> Result<()> {
         .collect();
 
     crate::formatter::output(cfg, &enriched)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn list(_cfg: &Config) -> Result<()> {
-    bail!(
-        "pup auth list is not available in WASM builds.\n\
-         Session storage is not available — credentials are read from environment variables."
-    )
 }

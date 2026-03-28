@@ -1,24 +1,19 @@
 use anyhow::Result;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::api_synthetics::{
     ListTestsOptionalParams, SearchTestsOptionalParams, SyntheticsAPI,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_synthetics::{
     SearchSuitesOptionalParams, SyntheticsAPI as SyntheticsV2API,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::model::{
     DeletedSuitesRequestDelete, DeletedSuitesRequestDeleteAttributes,
     DeletedSuitesRequestDeleteRequest, SuiteCreateEditRequest,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
 
-#[cfg(not(target_arch = "wasm32"))]
 fn synthetics_intake_base_url(cfg: &Config) -> String {
     if cfg.site == "datadoghq.com" || cfg.site == "datad0g.com" {
         format!("https://intake.synthetics.{}/api/v1", cfg.site)
@@ -27,7 +22,6 @@ fn synthetics_intake_base_url(cfg: &Config) -> String {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn build_auth_headers(cfg: &Config) -> anyhow::Result<reqwest::header::HeaderMap> {
     use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
     let api_key = cfg
@@ -57,7 +51,6 @@ fn build_auth_headers(cfg: &Config) -> anyhow::Result<reqwest::header::HeaderMap
 const POLL_INTERVAL_SECS: u64 = 5;
 const TRIGGER_APP: &str = "pup_cli";
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn tests_run(
     cfg: &Config,
     public_ids: Vec<String>,
@@ -213,7 +206,6 @@ pub async fn tests_run(
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn tests_list(cfg: &Config, page_size: i64, page_number: i64) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -231,17 +223,6 @@ pub async fn tests_list(cfg: &Config, page_size: i64, page_number: i64) -> Resul
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn tests_list(cfg: &Config, page_size: i64, page_number: i64) -> Result<()> {
-    let query = [
-        ("page_size", page_size.to_string()),
-        ("page_number", page_number.to_string()),
-    ];
-    let data = crate::api::get(cfg, "/api/v1/synthetics/tests", &query).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn tests_get(cfg: &Config, public_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -255,14 +236,6 @@ pub async fn tests_get(cfg: &Config, public_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn tests_get(cfg: &Config, public_id: &str) -> Result<()> {
-    let path = format!("/api/v1/synthetics/tests/{public_id}");
-    let data = crate::api::get(cfg, &path, &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn tests_search(
     cfg: &Config,
     text: Option<String>,
@@ -305,40 +278,6 @@ pub async fn tests_search(
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn tests_search(
-    cfg: &Config,
-    text: Option<String>,
-    facets_only: bool,
-    include_full_config: bool,
-    count: i64,
-    start: i64,
-    sort: Option<String>,
-) -> Result<()> {
-    let mut query: Vec<(&str, String)> = Vec::new();
-    if let Some(t) = text {
-        query.push(("text", t));
-    }
-    if facets_only {
-        query.push(("facets_only", "true".to_string()));
-    }
-    if include_full_config {
-        query.push(("include_full_config", "true".to_string()));
-    }
-    if count != 50 {
-        query.push(("count", count.to_string()));
-    }
-    if start != 0 {
-        query.push(("start", start.to_string()));
-    }
-    if let Some(s) = sort {
-        query.push(("sort", s));
-    }
-    let data = crate::api::get(cfg, "/api/v1/synthetics/tests/search", &query).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn locations_list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -352,15 +291,8 @@ pub async fn locations_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn locations_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v1/synthetics/locations", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---- Suites (V2 API) ----
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn suites_list(cfg: &Config, query: Option<String>) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -378,17 +310,6 @@ pub async fn suites_list(cfg: &Config, query: Option<String>) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn suites_list(cfg: &Config, query: Option<String>) -> Result<()> {
-    let mut q: Vec<(&str, String)> = Vec::new();
-    if let Some(qv) = query {
-        q.push(("query", qv));
-    }
-    let data = crate::api::get(cfg, "/api/v2/synthetics/suites", &q).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn suites_get(cfg: &Config, suite_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -402,14 +323,6 @@ pub async fn suites_get(cfg: &Config, suite_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn suites_get(cfg: &Config, suite_id: &str) -> Result<()> {
-    let path = format!("/api/v2/synthetics/suites/{suite_id}");
-    let data = crate::api::get(cfg, &path, &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn suites_create(cfg: &Config, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -424,14 +337,6 @@ pub async fn suites_create(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn suites_create(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    let data = crate::api::post(cfg, "/api/v2/synthetics/suites", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn suites_update(cfg: &Config, suite_id: &str, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -446,15 +351,6 @@ pub async fn suites_update(cfg: &Config, suite_id: &str, file: &str) -> Result<(
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn suites_update(cfg: &Config, suite_id: &str, file: &str) -> Result<()> {
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    let path = format!("/api/v2/synthetics/suites/{suite_id}");
-    let data = crate::api::put(cfg, &path, &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn suites_delete(cfg: &Config, suite_ids: Vec<String>) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -469,17 +365,4 @@ pub async fn suites_delete(cfg: &Config, suite_ids: Vec<String>) -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete synthetic suites: {e:?}"))?;
     formatter::output(cfg, &resp)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn suites_delete(cfg: &Config, suite_ids: Vec<String>) -> Result<()> {
-    let body = serde_json::json!({
-        "data": {
-            "attributes": {
-                "suite_ids": suite_ids
-            }
-        }
-    });
-    let data = crate::api::post(cfg, "/api/v2/synthetics/suites/delete", &body).await?;
-    crate::formatter::output(cfg, &data)
 }

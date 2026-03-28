@@ -1,16 +1,12 @@
 use anyhow::Result;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::api_dashboards::{DashboardsAPI, ListDashboardsOptionalParams};
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::model::Dashboard;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
 use crate::util;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -24,13 +20,6 @@ pub async fn list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v1/dashboard", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn get(cfg: &Config, id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -44,13 +33,6 @@ pub async fn get(cfg: &Config, id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn get(cfg: &Config, id: &str) -> Result<()> {
-    let data = crate::api::get(cfg, &format!("/api/v1/dashboard/{id}"), &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn create(cfg: &Config, file: &str) -> Result<()> {
     let body: Dashboard = util::read_json_file(file)?;
     let dd_cfg = client::make_dd_config(cfg);
@@ -65,14 +47,6 @@ pub async fn create(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn create(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::post(cfg, "/api/v1/dashboard", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn update(cfg: &Config, id: &str, file: &str) -> Result<()> {
     let body: Dashboard = util::read_json_file(file)?;
     let dd_cfg = client::make_dd_config(cfg);
@@ -87,14 +61,6 @@ pub async fn update(cfg: &Config, id: &str, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn update(cfg: &Config, id: &str, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::put(cfg, &format!("/api/v1/dashboard/{id}"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn delete(cfg: &Config, id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -106,10 +72,4 @@ pub async fn delete(cfg: &Config, id: &str) -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete dashboard: {e:?}"))?;
     formatter::output(cfg, &resp)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn delete(cfg: &Config, id: &str) -> Result<()> {
-    let data = crate::api::delete(cfg, &format!("/api/v1/dashboard/{id}")).await?;
-    crate::formatter::output(cfg, &data)
 }

@@ -1,9 +1,7 @@
 use anyhow::Result;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_teams::{
     GetTeamMembershipsOptionalParams, ListTeamsOptionalParams, TeamsAPI,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::model::{
     RelationshipToUserTeamUser, RelationshipToUserTeamUserData, TeamCreate, TeamCreateAttributes,
     TeamCreateRequest, TeamType, TeamUpdate, TeamUpdateAttributes, TeamUpdateRequest,
@@ -11,12 +9,10 @@ use datadog_api_client::datadogV2::model::{
     UserTeamType, UserTeamUpdate, UserTeamUpdateRequest, UserTeamUserType,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn teams_list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -30,13 +26,6 @@ pub async fn teams_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn teams_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v2/teams", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn teams_get(cfg: &Config, team_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -50,13 +39,6 @@ pub async fn teams_get(cfg: &Config, team_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn teams_get(cfg: &Config, team_id: &str) -> Result<()> {
-    let data = crate::api::get(cfg, &format!("/api/v2/teams/{team_id}"), &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn teams_delete(cfg: &Config, team_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -70,14 +52,6 @@ pub async fn teams_delete(cfg: &Config, team_id: &str) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn teams_delete(cfg: &Config, team_id: &str) -> Result<()> {
-    crate::api::delete(cfg, &format!("/api/v2/teams/{team_id}")).await?;
-    println!("Team '{team_id}' deleted successfully.");
-    Ok(())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn teams_create(cfg: &Config, name: &str, handle: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -94,22 +68,6 @@ pub async fn teams_create(cfg: &Config, name: &str, handle: &str) -> Result<()> 
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn teams_create(cfg: &Config, name: &str, handle: &str) -> Result<()> {
-    let body = serde_json::json!({
-        "data": {
-            "attributes": {
-                "handle": handle,
-                "name": name
-            },
-            "type": "team"
-        }
-    });
-    let data = crate::api::post(cfg, "/api/v2/teams", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn teams_update(cfg: &Config, team_id: &str, name: &str, handle: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -126,22 +84,6 @@ pub async fn teams_update(cfg: &Config, team_id: &str, name: &str, handle: &str)
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn teams_update(cfg: &Config, team_id: &str, name: &str, handle: &str) -> Result<()> {
-    let body = serde_json::json!({
-        "data": {
-            "attributes": {
-                "handle": handle,
-                "name": name
-            },
-            "type": "team"
-        }
-    });
-    let data = crate::api::patch(cfg, &format!("/api/v2/teams/{team_id}"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn memberships_list(cfg: &Config, team_id: &str, page_size: i64) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -156,14 +98,6 @@ pub async fn memberships_list(cfg: &Config, team_id: &str, page_size: i64) -> Re
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn memberships_list(cfg: &Config, team_id: &str, page_size: i64) -> Result<()> {
-    let q = vec![("page[size]", page_size.to_string())];
-    let data = crate::api::get(cfg, &format!("/api/v2/teams/{team_id}/memberships"), &q).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn memberships_add(
     cfg: &Config,
     team_id: &str,
@@ -198,37 +132,6 @@ pub async fn memberships_add(
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn memberships_add(
-    cfg: &Config,
-    team_id: &str,
-    user_id: &str,
-    role: Option<String>,
-) -> Result<()> {
-    let mut attrs = serde_json::json!({});
-    if let Some(r) = &role {
-        attrs["role"] = serde_json::json!(r);
-    }
-    let body = serde_json::json!({
-        "data": {
-            "attributes": attrs,
-            "relationships": {
-                "user": {
-                    "data": {
-                        "id": user_id,
-                        "type": "users"
-                    }
-                }
-            },
-            "type": "team_memberships"
-        }
-    });
-    let data =
-        crate::api::post(cfg, &format!("/api/v2/teams/{team_id}/memberships"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn memberships_update(
     cfg: &Config,
     team_id: &str,
@@ -254,31 +157,6 @@ pub async fn memberships_update(
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn memberships_update(
-    cfg: &Config,
-    team_id: &str,
-    user_id: &str,
-    role: &str,
-) -> Result<()> {
-    let body = serde_json::json!({
-        "data": {
-            "attributes": {
-                "role": role
-            },
-            "type": "team_memberships"
-        }
-    });
-    let data = crate::api::patch(
-        cfg,
-        &format!("/api/v2/teams/{team_id}/memberships/{user_id}"),
-        &body,
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn memberships_remove(cfg: &Config, team_id: &str, user_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -288,17 +166,6 @@ pub async fn memberships_remove(cfg: &Config, team_id: &str, user_id: &str) -> R
     api.delete_team_membership(team_id.to_string(), user_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to remove membership: {e:?}"))?;
-    println!("Membership for user {user_id} removed from team {team_id}.");
-    Ok(())
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn memberships_remove(cfg: &Config, team_id: &str, user_id: &str) -> Result<()> {
-    crate::api::delete(
-        cfg,
-        &format!("/api/v2/teams/{team_id}/memberships/{user_id}"),
-    )
-    .await?;
     println!("Membership for user {user_id} removed from team {team_id}.");
     Ok(())
 }

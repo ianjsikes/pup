@@ -11,7 +11,6 @@ use crate::config::Config;
 ///            POST /runs/stream      — streaming run (SSE)
 use anyhow::Result;
 
-#[cfg(not(target_arch = "wasm32"))]
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::{tcp::OwnedWriteHalf, TcpListener},
@@ -23,7 +22,6 @@ pub const DEFAULT_HOST: &str = "127.0.0.1";
 const LASSIE_BASE: &str = "/api/unstable/lassie-ng/v1";
 
 /// Starts the ACP server on the given host and port.
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn serve(cfg: &Config, port: u16, host: &str, agent_id: Option<String>) -> Result<()> {
     cfg.validate_auth()?;
 
@@ -86,7 +84,6 @@ pub async fn serve(cfg: &Config, port: u16, host: &str, agent_id: Option<String>
 }
 
 /// Fetches the first available Datadog Bits AI agent via GET /agents.
-#[cfg(not(target_arch = "wasm32"))]
 async fn resolve_agent_id(
     app_base: &str,
     access_token: Option<&str>,
@@ -135,7 +132,6 @@ async fn resolve_agent_id(
     Ok(id.to_string())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 async fn handle_connection(
     stream: tokio::net::TcpStream,
     peer_addr: std::net::SocketAddr,
@@ -252,7 +248,6 @@ async fn handle_connection(
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 async fn write_agent_card(writer: &mut OwnedWriteHalf, agent_id: &str) -> Result<()> {
     let card = serde_json::json!({
         "name": "Datadog AI Agent",
@@ -273,7 +268,6 @@ async fn write_agent_card(writer: &mut OwnedWriteHalf, agent_id: &str) -> Result
 }
 
 /// Handles both sync (`POST /runs`) and streaming (`POST /runs/stream`) ACP requests.
-#[cfg(not(target_arch = "wasm32"))]
 #[allow(clippy::too_many_arguments)]
 async fn handle_run(
     writer: &mut OwnedWriteHalf,
@@ -374,7 +368,6 @@ async fn handle_run(
 }
 
 /// Handles OpenAI-compatible POST /chat/completions, proxying to Datadog Bits AI.
-#[cfg(not(target_arch = "wasm32"))]
 #[allow(clippy::too_many_arguments)]
 async fn handle_openai_completions(
     writer: &mut OwnedWriteHalf,
@@ -479,7 +472,6 @@ async fn handle_openai_completions(
 }
 
 /// Collects Datadog Bits AI response and returns OpenAI chat completion format.
-#[cfg(not(target_arch = "wasm32"))]
 async fn collect_lassie_as_openai(
     writer: &mut OwnedWriteHalf,
     resp: reqwest::Response,
@@ -517,7 +509,6 @@ async fn collect_lassie_as_openai(
 }
 
 /// Streams Datadog Bits AI SSE as OpenAI chat completion chunks.
-#[cfg(not(target_arch = "wasm32"))]
 async fn stream_lassie_as_openai(
     writer: &mut OwnedWriteHalf,
     resp: reqwest::Response,
@@ -627,7 +618,6 @@ async fn stream_lassie_as_openai(
 }
 
 /// Collects the full Datadog Bits AI response and returns a single ACP run response.
-#[cfg(not(target_arch = "wasm32"))]
 async fn collect_lassie_to_acp(
     writer: &mut OwnedWriteHalf,
     resp: reqwest::Response,
@@ -653,7 +643,6 @@ async fn collect_lassie_to_acp(
 }
 
 /// Streams Datadog Bits AI SSE output as ACP SSE events.
-#[cfg(not(target_arch = "wasm32"))]
 async fn stream_lassie_to_acp(
     writer: &mut OwnedWriteHalf,
     resp: reqwest::Response,
@@ -970,7 +959,6 @@ fn add_auth(
 // HTTP helpers
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 async fn write_json_response(
     writer: &mut OwnedWriteHalf,
     status: u16,
@@ -991,7 +979,6 @@ async fn write_json_response(
     Ok(())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 async fn write_sse_event(
     writer: &mut OwnedWriteHalf,
     event_type: &str,
@@ -1018,16 +1005,6 @@ fn http_reason(status: u16) -> &'static str {
 // ---------------------------------------------------------------------------
 // WASM stub
 // ---------------------------------------------------------------------------
-
-#[cfg(target_arch = "wasm32")]
-pub async fn serve(
-    _cfg: &Config,
-    _port: u16,
-    _host: &str,
-    _agent_id: Option<String>,
-) -> Result<()> {
-    anyhow::bail!("acp serve is not supported in WASM")
-}
 
 // ---------------------------------------------------------------------------
 // Tests

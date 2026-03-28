@@ -14,11 +14,12 @@ crate-type = ["cdylib", "rlib"]
 default = ["native"]
 native = [
     "dep:datadog-api-client",
+    "datadog-api-client/native-tls",
+    "datadog-api-client/zstd",
+    "datadog-api-client/retry",
     "dep:keyring",
     "dep:dirs",
     "dep:open",
-    "dep:reqwest-middleware",
-    "dep:async-trait",
     "dep:task-local-extensions",
     "dep:sha2",
     "dep:base64",
@@ -40,6 +41,9 @@ native = [
     "dep:tokio-util",
 ]
 wasi = [
+    "dep:datadog-api-client",
+    "datadog-api-client/rustls-tls",
+    "datadog-api-client/retry",
     "dep:sha2",
     "dep:base64",
     "dep:rand",
@@ -55,6 +59,7 @@ wasi = [
 ]
 vendored-openssl = ["dep:openssl"]
 browser = [
+    "dep:datadog-api-client",
     "dep:wasm-bindgen",
     "dep:wasm-bindgen-futures",
     "dep:js-sys",
@@ -114,12 +119,15 @@ ssh-key = { version = "0.6", features = ["p256", "std"], optional = true }
 futures = { version = "0.3", optional = true }
 tokio-util = { version = "0.7", features = ["compat", "io"], optional = true }
 
-# Datadog API client (pins reqwest 0.11 + reqwest-middleware 0.2)
-datadog-api-client = { git = "https://github.com/DataDog/datadog-api-client-rust", rev = "78857cd3d1d39eaf0bd0d39e2c41bafd245ddc30", optional = true }
+# Datadog API client — wasm-compat branch adds wasm32 support
+# Use default-features = false; feature sets are activated per-target via features above
+# TODO: replace path with git rev once wasm-compat PR is merged
+datadog-api-client = { path = "../../DataDog/datadog-api-client-rust", optional = true, default-features = false }
 
-# HTTP middleware (version-matched to DD client)
-reqwest-middleware = { version = "0.2", optional = true }
-async-trait = { version = "0.1", optional = true }
+# HTTP middleware (version-matched to DD client; compiles on all targets)
+reqwest-middleware = "0.2"
+async-trait = "0.1"
+# task-local-extensions is used only by the native bearer-token middleware impl
 task-local-extensions = { version = "0.1", optional = true }
 
 # OS keychain for token storage

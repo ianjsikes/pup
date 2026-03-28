@@ -1,16 +1,12 @@
 use anyhow::Result;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::api_notebooks::{ListNotebooksOptionalParams, NotebooksAPI};
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::model::{NotebookCreateRequest, NotebookUpdateRequest};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
 use crate::util;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -24,13 +20,6 @@ pub async fn list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v1/notebooks", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn get(cfg: &Config, notebook_id: i64) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -44,13 +33,6 @@ pub async fn get(cfg: &Config, notebook_id: i64) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn get(cfg: &Config, notebook_id: i64) -> Result<()> {
-    let data = crate::api::get(cfg, &format!("/api/v1/notebooks/{notebook_id}"), &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn delete(cfg: &Config, notebook_id: i64) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -64,14 +46,6 @@ pub async fn delete(cfg: &Config, notebook_id: i64) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn delete(cfg: &Config, notebook_id: i64) -> Result<()> {
-    crate::api::delete(cfg, &format!("/api/v1/notebooks/{notebook_id}")).await?;
-    println!("Successfully deleted notebook {notebook_id}");
-    Ok(())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn create(cfg: &Config, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -86,14 +60,6 @@ pub async fn create(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn create(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::post(cfg, "/api/v1/notebooks", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn update(cfg: &Config, notebook_id: i64, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -106,11 +72,4 @@ pub async fn update(cfg: &Config, notebook_id: i64, file: &str) -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("failed to update notebook: {e:?}"))?;
     formatter::output(cfg, &resp)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn update(cfg: &Config, notebook_id: i64, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::put(cfg, &format!("/api/v1/notebooks/{notebook_id}"), &body).await?;
-    crate::formatter::output(cfg, &data)
 }

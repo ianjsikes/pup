@@ -1,9 +1,7 @@
 use anyhow::Result;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_case_management::{
     CaseManagementAPI, SearchCasesOptionalParams,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::model::{
     CaseAssign, CaseAssignAttributes, CaseAssignRequest, CaseCreateRequest, CaseEmpty,
     CaseEmptyRequest, CaseNotificationRuleCreateRequest, CaseNotificationRuleUpdateRequest,
@@ -15,7 +13,6 @@ use datadog_api_client::datadogV2::model::{
     ProjectUpdateRequest, ServiceNowTicketCreateRequest,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
@@ -24,7 +21,6 @@ use crate::formatter;
 // Helper: build a CaseManagementAPI with bearer-token support
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 fn make_api(cfg: &Config) -> CaseManagementAPI {
     let dd_cfg = client::make_dd_config(cfg);
     match client::make_bearer_client(cfg) {
@@ -37,7 +33,6 @@ fn make_api(cfg: &Config) -> CaseManagementAPI {
 // Core case operations
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn search(cfg: &Config, query: Option<String>, page_size: i64) -> Result<()> {
     let api = make_api(cfg);
     let mut params = SearchCasesOptionalParams::default().page_size(page_size);
@@ -51,17 +46,6 @@ pub async fn search(cfg: &Config, query: Option<String>, page_size: i64) -> Resu
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn search(cfg: &Config, query: Option<String>, page_size: i64) -> Result<()> {
-    let mut q = vec![("page[size]", page_size.to_string())];
-    if let Some(filter) = query {
-        q.push(("filter[query]", filter));
-    }
-    let data = crate::api::get(cfg, "/api/v2/cases", &q).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn get(cfg: &Config, case_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -71,13 +55,6 @@ pub async fn get(cfg: &Config, case_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn get(cfg: &Config, case_id: &str) -> Result<()> {
-    let data = crate::api::get(cfg, &format!("/api/v2/cases/{case_id}"), &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn create(cfg: &Config, file: &str) -> Result<()> {
     let api = make_api(cfg);
     let body: CaseCreateRequest = crate::util::read_json_file(file)?;
@@ -86,13 +63,6 @@ pub async fn create(cfg: &Config, file: &str) -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("failed to create case: {e:?}"))?;
     formatter::output(cfg, &resp)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn create(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    let data = crate::api::post(cfg, "/api/v2/cases", &body).await?;
-    crate::formatter::output(cfg, &data)
 }
 
 pub async fn create_from_flags(
@@ -115,7 +85,7 @@ pub async fn create_from_flags(
     if let Some(desc) = description {
         body["data"]["attributes"]["description"] = serde_json::json!(desc);
     }
-    let data = crate::api::post(cfg, "/api/v2/cases", &body).await?;
+    let data = client::raw_post(cfg, "/api/v2/cases", body).await?;
     crate::formatter::output(cfg, &data)
 }
 
@@ -123,7 +93,6 @@ pub async fn create_from_flags(
 // Projects
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn projects_list(cfg: &Config) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -133,13 +102,6 @@ pub async fn projects_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn projects_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v2/case-management/projects", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn projects_get(cfg: &Config, project_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -149,18 +111,6 @@ pub async fn projects_get(cfg: &Config, project_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn projects_get(cfg: &Config, project_id: &str) -> Result<()> {
-    let data = crate::api::get(
-        cfg,
-        &format!("/api/v2/case-management/projects/{project_id}"),
-        &[],
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn projects_delete(cfg: &Config, project_id: &str) -> Result<()> {
     let api = make_api(cfg);
     api.delete_project(project_id.to_string())
@@ -170,18 +120,6 @@ pub async fn projects_delete(cfg: &Config, project_id: &str) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn projects_delete(cfg: &Config, project_id: &str) -> Result<()> {
-    crate::api::delete(
-        cfg,
-        &format!("/api/v2/case-management/projects/{project_id}"),
-    )
-    .await?;
-    println!("Project {project_id} deleted.");
-    Ok(())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn projects_create(cfg: &Config, name: &str, key: &str) -> Result<()> {
     let api = make_api(cfg);
     let body = ProjectCreateRequest::new(ProjectCreate::new(
@@ -195,26 +133,10 @@ pub async fn projects_create(cfg: &Config, name: &str, key: &str) -> Result<()> 
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn projects_create(cfg: &Config, name: &str, key: &str) -> Result<()> {
-    let body = serde_json::json!({
-        "data": {
-            "attributes": {
-                "key": key,
-                "name": name
-            },
-            "type": "project"
-        }
-    });
-    let data = crate::api::post(cfg, "/api/v2/case-management/projects", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Archive / Unarchive
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn archive(cfg: &Config, case_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let data = CaseEmpty::new(CaseResourceType::CASE);
@@ -226,18 +148,6 @@ pub async fn archive(cfg: &Config, case_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn archive(cfg: &Config, case_id: &str) -> Result<()> {
-    let body = serde_json::json!({
-        "data": {
-            "type": "case"
-        }
-    });
-    let data = crate::api::post(cfg, &format!("/api/v2/cases/{case_id}/archive"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn unarchive(cfg: &Config, case_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let data = CaseEmpty::new(CaseResourceType::CASE);
@@ -249,22 +159,10 @@ pub async fn unarchive(cfg: &Config, case_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn unarchive(cfg: &Config, case_id: &str) -> Result<()> {
-    let body = serde_json::json!({
-        "data": {
-            "type": "case"
-        }
-    });
-    let data = crate::api::post(cfg, &format!("/api/v2/cases/{case_id}/unarchive"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Assign / Update priority / Update status
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn assign(cfg: &Config, case_id: &str, user_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let body = CaseAssignRequest::new(CaseAssign::new(
@@ -278,21 +176,6 @@ pub async fn assign(cfg: &Config, case_id: &str, user_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn assign(cfg: &Config, case_id: &str, user_id: &str) -> Result<()> {
-    let body = serde_json::json!({
-        "data": {
-            "attributes": {
-                "assignee_id": user_id
-            },
-            "type": "case"
-        }
-    });
-    let data = crate::api::post(cfg, &format!("/api/v2/cases/{case_id}/assign"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn update_priority(cfg: &Config, case_id: &str, priority: &str) -> Result<()> {
     let api = make_api(cfg);
     let priority_val = match priority.to_uppercase().as_str() {
@@ -315,26 +198,6 @@ pub async fn update_priority(cfg: &Config, case_id: &str, priority: &str) -> Res
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn update_priority(cfg: &Config, case_id: &str, priority: &str) -> Result<()> {
-    let p = priority.to_uppercase();
-    match p.as_str() {
-        "P1" | "P2" | "P3" | "P4" | "P5" | "NOT_DEFINED" => {}
-        _ => anyhow::bail!("invalid priority: {priority} (use P1, P2, P3, P4, P5, NOT_DEFINED)"),
-    }
-    let body = serde_json::json!({
-        "data": {
-            "attributes": {
-                "priority": p
-            },
-            "type": "case"
-        }
-    });
-    let data = crate::api::post(cfg, &format!("/api/v2/cases/{case_id}/priority"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 #[allow(deprecated)]
 pub async fn update_status(cfg: &Config, case_id: &str, status: &str) -> Result<()> {
     let api = make_api(cfg);
@@ -355,30 +218,10 @@ pub async fn update_status(cfg: &Config, case_id: &str, status: &str) -> Result<
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn update_status(cfg: &Config, case_id: &str, status: &str) -> Result<()> {
-    let s = status.to_uppercase();
-    match s.as_str() {
-        "OPEN" | "IN_PROGRESS" | "CLOSED" => {}
-        _ => anyhow::bail!("invalid status: {status} (use OPEN, IN_PROGRESS, CLOSED)"),
-    }
-    let body = serde_json::json!({
-        "data": {
-            "attributes": {
-                "status": s
-            },
-            "type": "case"
-        }
-    });
-    let data = crate::api::post(cfg, &format!("/api/v2/cases/{case_id}/status"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Jira integration
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn jira_create_issue(cfg: &Config, case_id: &str, file: &str) -> Result<()> {
     let api = make_api(cfg);
     let body: JiraIssueCreateRequest = crate::util::read_json_file(file)?;
@@ -389,15 +232,6 @@ pub async fn jira_create_issue(cfg: &Config, case_id: &str, file: &str) -> Resul
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn jira_create_issue(cfg: &Config, case_id: &str, file: &str) -> Result<()> {
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    crate::api::post(cfg, &format!("/api/v2/cases/{case_id}/jira_issue"), &body).await?;
-    println!("Jira issue created for case '{case_id}'.");
-    Ok(())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn jira_link(cfg: &Config, case_id: &str, file: &str) -> Result<()> {
     let api = make_api(cfg);
     let body: JiraIssueLinkRequest = crate::util::read_json_file(file)?;
@@ -408,20 +242,6 @@ pub async fn jira_link(cfg: &Config, case_id: &str, file: &str) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn jira_link(cfg: &Config, case_id: &str, file: &str) -> Result<()> {
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    crate::api::post(
-        cfg,
-        &format!("/api/v2/cases/{case_id}/jira_issue/link"),
-        &body,
-    )
-    .await?;
-    println!("Jira issue linked to case '{case_id}'.");
-    Ok(())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn jira_unlink(cfg: &Config, case_id: &str) -> Result<()> {
     let api = make_api(cfg);
     api.unlink_jira_issue(case_id.to_string())
@@ -431,18 +251,10 @@ pub async fn jira_unlink(cfg: &Config, case_id: &str) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn jira_unlink(cfg: &Config, case_id: &str) -> Result<()> {
-    crate::api::delete(cfg, &format!("/api/v2/cases/{case_id}/jira_issue")).await?;
-    println!("Jira issue unlinked from case '{case_id}'.");
-    Ok(())
-}
-
 // ---------------------------------------------------------------------------
 // ServiceNow integration
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn servicenow_create_ticket(cfg: &Config, case_id: &str, file: &str) -> Result<()> {
     let api = make_api(cfg);
     let body: ServiceNowTicketCreateRequest = crate::util::read_json_file(file)?;
@@ -453,24 +265,10 @@ pub async fn servicenow_create_ticket(cfg: &Config, case_id: &str, file: &str) -
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn servicenow_create_ticket(cfg: &Config, case_id: &str, file: &str) -> Result<()> {
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    crate::api::post(
-        cfg,
-        &format!("/api/v2/cases/{case_id}/servicenow_ticket"),
-        &body,
-    )
-    .await?;
-    println!("ServiceNow ticket created for case '{case_id}'.");
-    Ok(())
-}
-
 // ---------------------------------------------------------------------------
 // Projects notification rules
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn projects_notification_rules_list(cfg: &Config, project_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -480,18 +278,6 @@ pub async fn projects_notification_rules_list(cfg: &Config, project_id: &str) ->
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn projects_notification_rules_list(cfg: &Config, project_id: &str) -> Result<()> {
-    let data = crate::api::get(
-        cfg,
-        &format!("/api/v2/case-management/projects/{project_id}/notification_rules"),
-        &[],
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn projects_notification_rules_create(
     cfg: &Config,
     project_id: &str,
@@ -506,23 +292,6 @@ pub async fn projects_notification_rules_create(
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn projects_notification_rules_create(
-    cfg: &Config,
-    project_id: &str,
-    file: &str,
-) -> Result<()> {
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    let data = crate::api::post(
-        cfg,
-        &format!("/api/v2/case-management/projects/{project_id}/notification_rules"),
-        &body,
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn projects_notification_rules_update(
     cfg: &Config,
     project_id: &str,
@@ -538,25 +307,6 @@ pub async fn projects_notification_rules_update(
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn projects_notification_rules_update(
-    cfg: &Config,
-    project_id: &str,
-    rule_id: &str,
-    file: &str,
-) -> Result<()> {
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    crate::api::patch(
-        cfg,
-        &format!("/api/v2/case-management/projects/{project_id}/notification_rules/{rule_id}"),
-        &body,
-    )
-    .await?;
-    println!("Notification rule '{rule_id}' updated.");
-    Ok(())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn projects_notification_rules_delete(
     cfg: &Config,
     project_id: &str,
@@ -570,26 +320,10 @@ pub async fn projects_notification_rules_delete(
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn projects_notification_rules_delete(
-    cfg: &Config,
-    project_id: &str,
-    rule_id: &str,
-) -> Result<()> {
-    crate::api::delete(
-        cfg,
-        &format!("/api/v2/case-management/projects/{project_id}/notification_rules/{rule_id}"),
-    )
-    .await?;
-    println!("Notification rule '{rule_id}' deleted.");
-    Ok(())
-}
-
 // ---------------------------------------------------------------------------
 // Move case to project
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn move_to_project(cfg: &Config, case_id: &str, project_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let data = ProjectRelationshipData::new(project_id.to_string(), ProjectResourceType::PROJECT);
@@ -601,23 +335,10 @@ pub async fn move_to_project(cfg: &Config, case_id: &str, project_id: &str) -> R
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn move_to_project(cfg: &Config, case_id: &str, project_id: &str) -> Result<()> {
-    let body = serde_json::json!({
-        "data": {
-            "id": project_id,
-            "type": "project"
-        }
-    });
-    let data = crate::api::post(cfg, &format!("/api/v2/cases/{case_id}/project"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Update case title
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn update_title(cfg: &Config, case_id: &str, title: &str) -> Result<()> {
     let api = make_api(cfg);
     let attrs = CaseUpdateTitleAttributes::new(title.to_string());
@@ -630,25 +351,10 @@ pub async fn update_title(cfg: &Config, case_id: &str, title: &str) -> Result<()
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn update_title(cfg: &Config, case_id: &str, title: &str) -> Result<()> {
-    let body = serde_json::json!({
-        "data": {
-            "attributes": {
-                "title": title
-            },
-            "type": "case"
-        }
-    });
-    let data = crate::api::post(cfg, &format!("/api/v2/cases/{case_id}/title"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Update project
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn projects_update(cfg: &Config, project_id: &str, file: &str) -> Result<()> {
     let api = make_api(cfg);
     let body: ProjectUpdateRequest = crate::util::read_json_file(file)?;
@@ -657,16 +363,4 @@ pub async fn projects_update(cfg: &Config, project_id: &str, file: &str) -> Resu
         .await
         .map_err(|e| anyhow::anyhow!("failed to update project: {e:?}"))?;
     formatter::output(cfg, &resp)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn projects_update(cfg: &Config, project_id: &str, file: &str) -> Result<()> {
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    let data = crate::api::patch(
-        cfg,
-        &format!("/api/v2/case-management/projects/{project_id}"),
-        &body,
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
 }

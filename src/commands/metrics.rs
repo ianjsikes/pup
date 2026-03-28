@@ -29,24 +29,18 @@ fn matches_glob(text: &str, pattern: &str) -> bool {
     true
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::api_metrics::{
     ListActiveMetricsOptionalParams, MetricsAPI as MetricsV1API,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::model::MetricMetadata;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_metrics::MetricsAPI as MetricsV2API;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::model::MetricPayload;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
 use crate::util;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn list(cfg: &Config, filter: Option<String>, from: String) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -81,36 +75,6 @@ pub async fn list(cfg: &Config, filter: Option<String>, from: String) -> Result<
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn list(cfg: &Config, filter: Option<String>, from: String) -> Result<()> {
-    let from_ts = util::parse_time_to_unix(&from)?;
-    let query_params = vec![("from", from_ts.to_string())];
-    let data = crate::api::get(cfg, "/api/v2/metrics", &query_params).await?;
-
-    // Client-side filter if provided
-    if let Some(pattern) = filter {
-        let pattern = pattern.to_lowercase();
-        let metrics = data
-            .get("metrics")
-            .and_then(|v| v.as_array())
-            .map(|v| v.as_slice())
-            .unwrap_or(&[]);
-        let filtered: Vec<&str> = metrics
-            .iter()
-            .filter_map(|m| m.as_str())
-            .filter(|s| matches_glob(&s.to_lowercase(), &pattern))
-            .collect();
-        let output = serde_json::json!({
-            "from": data.get("from"),
-            "metrics": filtered,
-        });
-        return crate::formatter::output(cfg, &output);
-    }
-
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn search(cfg: &Config, query: String, from: String, to: String) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -128,14 +92,6 @@ pub async fn search(cfg: &Config, query: String, from: String, to: String) -> Re
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn search(cfg: &Config, query: String, from: String, to: String) -> Result<()> {
-    let query_params = vec![("q", format!("metrics:{query}"))];
-    let data = crate::api::get(cfg, "/api/v1/search", &query_params).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn metadata_get(cfg: &Config, metric_name: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -149,14 +105,6 @@ pub async fn metadata_get(cfg: &Config, metric_name: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn metadata_get(cfg: &Config, metric_name: &str) -> Result<()> {
-    let path = format!("/api/v1/metrics/{metric_name}");
-    let data = crate::api::get(cfg, &path, &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn query(cfg: &Config, query: String, from: String, to: String) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -174,20 +122,6 @@ pub async fn query(cfg: &Config, query: String, from: String, to: String) -> Res
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn query(cfg: &Config, query: String, from: String, to: String) -> Result<()> {
-    let from_ts = util::parse_time_to_unix(&from)?;
-    let to_ts = util::parse_time_to_unix(&to)?;
-    let body = serde_json::json!({
-        "formulas": [{ "formula": query }],
-        "from": from_ts * 1000,
-        "to": to_ts * 1000
-    });
-    let data = crate::api::post(cfg, "/api/v2/query/timeseries", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn metadata_update(cfg: &Config, metric_name: &str, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -202,15 +136,6 @@ pub async fn metadata_update(cfg: &Config, metric_name: &str, file: &str) -> Res
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn metadata_update(cfg: &Config, metric_name: &str, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let path = format!("/api/v1/metrics/{metric_name}");
-    let data = crate::api::put(cfg, &path, &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn submit(cfg: &Config, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -228,14 +153,6 @@ pub async fn submit(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn submit(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::post(cfg, "/api/v2/series", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn tags_list(cfg: &Config, metric_name: &str) -> Result<()> {
     use datadog_api_client::datadogV2::api_metrics::ListTagsByMetricNameOptionalParams;
 
@@ -252,13 +169,6 @@ pub async fn tags_list(cfg: &Config, metric_name: &str) -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("failed to list tags for metric {metric_name}: {e:?}"))?;
     formatter::output(cfg, &resp)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn tags_list(cfg: &Config, metric_name: &str) -> Result<()> {
-    let path = format!("/api/v2/metrics/{metric_name}/tags");
-    let data = crate::api::get(cfg, &path, &[]).await?;
-    crate::formatter::output(cfg, &data)
 }
 
 #[cfg(test)]

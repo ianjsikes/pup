@@ -13,7 +13,6 @@ pub mod cicd;
 pub mod cloud;
 pub mod cloud_auth;
 pub mod code_coverage;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod completions;
 pub mod containers;
 pub mod cost;

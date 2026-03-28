@@ -1,18 +1,14 @@
 use anyhow::Result;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_key_management::{
     KeyManagementAPI, ListApplicationKeysOptionalParams,
     ListCurrentUserApplicationKeysOptionalParams,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::model::ApplicationKeysSort;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
 
-#[cfg(not(target_arch = "wasm32"))]
 fn parse_sort(s: &str) -> Result<ApplicationKeysSort> {
     match s {
         "created_at" => Ok(ApplicationKeysSort::CREATED_AT_ASCENDING),
@@ -31,7 +27,6 @@ fn parse_sort(s: &str) -> Result<ApplicationKeysSort> {
 // List application keys (current user)
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn list(
     cfg: &Config,
     page_size: i64,
@@ -66,36 +61,10 @@ pub async fn list(
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn list(
-    cfg: &Config,
-    page_size: i64,
-    page_number: i64,
-    filter: &str,
-    sort: &str,
-) -> Result<()> {
-    let mut query: Vec<(&str, String)> = Vec::new();
-    if page_size > 0 {
-        query.push(("page[size]", page_size.to_string()));
-    }
-    if page_number > 0 {
-        query.push(("page[number]", page_number.to_string()));
-    }
-    if !filter.is_empty() {
-        query.push(("filter", filter.to_string()));
-    }
-    if !sort.is_empty() {
-        query.push(("sort", sort.to_string()));
-    }
-    let data = crate::api::get(cfg, "/api/v2/current_user/application_keys", &query).await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // List all application keys (org-wide, requires API keys)
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn list_all(
     cfg: &Config,
     page_size: i64,
@@ -130,36 +99,10 @@ pub async fn list_all(
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn list_all(
-    cfg: &Config,
-    page_size: i64,
-    page_number: i64,
-    filter: &str,
-    sort: &str,
-) -> Result<()> {
-    let mut query: Vec<(&str, String)> = Vec::new();
-    if page_size > 0 {
-        query.push(("page[size]", page_size.to_string()));
-    }
-    if page_number > 0 {
-        query.push(("page[number]", page_number.to_string()));
-    }
-    if !filter.is_empty() {
-        query.push(("filter", filter.to_string()));
-    }
-    if !sort.is_empty() {
-        query.push(("sort", sort.to_string()));
-    }
-    let data = crate::api::get(cfg, "/api/v2/application_keys", &query).await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Get application key details (current user)
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn get(cfg: &Config, key_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -173,22 +116,10 @@ pub async fn get(cfg: &Config, key_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn get(cfg: &Config, key_id: &str) -> Result<()> {
-    let data = crate::api::get(
-        cfg,
-        &format!("/api/v2/current_user/application_keys/{key_id}"),
-        &[],
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Create application key (current user)
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn create(cfg: &Config, name: &str, scopes: &str) -> Result<()> {
     use datadog_api_client::datadogV2::model::{
         ApplicationKeyCreateAttributes, ApplicationKeyCreateData, ApplicationKeyCreateRequest,
@@ -222,32 +153,10 @@ pub async fn create(cfg: &Config, name: &str, scopes: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn create(cfg: &Config, name: &str, scopes: &str) -> Result<()> {
-    let mut attrs = serde_json::json!({ "name": name });
-    if !scopes.is_empty() {
-        let scope_list: Vec<&str> = scopes
-            .split(',')
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-            .collect();
-        attrs["scopes"] = serde_json::json!(scope_list);
-    }
-    let body = serde_json::json!({
-        "data": {
-            "type": "application_keys",
-            "attributes": attrs,
-        }
-    });
-    let data = crate::api::post(cfg, "/api/v2/current_user/application_keys", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Update application key (current user)
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn update(cfg: &Config, key_id: &str, name: &str, scopes: &str) -> Result<()> {
     use datadog_api_client::datadogV2::model::{
         ApplicationKeyUpdateAttributes, ApplicationKeyUpdateData, ApplicationKeyUpdateRequest,
@@ -285,41 +194,10 @@ pub async fn update(cfg: &Config, key_id: &str, name: &str, scopes: &str) -> Res
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn update(cfg: &Config, key_id: &str, name: &str, scopes: &str) -> Result<()> {
-    let mut attrs = serde_json::json!({});
-    if !name.is_empty() {
-        attrs["name"] = serde_json::json!(name);
-    }
-    if !scopes.is_empty() {
-        let scope_list: Vec<&str> = scopes
-            .split(',')
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-            .collect();
-        attrs["scopes"] = serde_json::json!(scope_list);
-    }
-    let body = serde_json::json!({
-        "data": {
-            "type": "application_keys",
-            "id": key_id,
-            "attributes": attrs,
-        }
-    });
-    let data = crate::api::patch(
-        cfg,
-        &format!("/api/v2/current_user/application_keys/{key_id}"),
-        &body,
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Delete application key (current user)
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn delete(cfg: &Config, key_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -329,17 +207,6 @@ pub async fn delete(cfg: &Config, key_id: &str) -> Result<()> {
     api.delete_current_user_application_key(key_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete application key: {e:?}"))?;
-    println!("Successfully deleted application key {key_id}");
-    Ok(())
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn delete(cfg: &Config, key_id: &str) -> Result<()> {
-    crate::api::delete(
-        cfg,
-        &format!("/api/v2/current_user/application_keys/{key_id}"),
-    )
-    .await?;
     println!("Successfully deleted application key {key_id}");
     Ok(())
 }
