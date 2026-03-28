@@ -1,0 +1,15 @@
+{
+  "data": [
+    "<list>",
+    {
+      "attributes": {
+        "*": "<...>"
+      },
+      "id": "str",
+      "links": {
+        "self": "str"
+      },
+      "type": "str"
+    }
+  ]
+}

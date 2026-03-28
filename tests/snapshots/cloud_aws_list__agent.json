@@ -4,17 +4,13 @@
       "<list>",
       {
         "account_id": "<unix_ts>",
-        "account_specific_namespace_rules": {
-          "collect_custom_metrics": "bool",
-          "crawl_alarms": "bool"
-        },
+        "account_specific_namespace_rules": {},
         "cspm_resource_collection_enabled": "bool",
         "errors": [
           "<empty_list>"
         ],
         "excluded_regions": [
-          "<list>",
-          "str"
+          "<empty_list>"
         ],
         "extended_resource_collection_enabled": "bool",
         "filter_tags": [

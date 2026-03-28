@@ -1,0 +1,12 @@
+{
+  "data": {
+    "attributes": {
+      "*": "<...>"
+    },
+    "id": "str",
+    "meta": {
+      "*": "str"
+    },
+    "type": "str"
+  }
+}

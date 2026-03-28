@@ -17,6 +17,7 @@
     "resource_provider_configs": [
       "<empty_list>"
     ],
+    "secretless_auth_enabled": "bool",
     "tenant_name": "<uuid>",
     "usage_metrics_enabled": "bool",
     "warnings": [

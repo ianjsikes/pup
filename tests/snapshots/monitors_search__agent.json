@@ -52,8 +52,7 @@
         "last_triggered_ts": "NoneType",
         "message": "str",
         "metrics": [
-          "<list>",
-          "str"
+          "<empty_list>"
         ],
         "modified": "int",
         "muted_until_ts": "NoneType",
@@ -67,7 +66,7 @@
         ],
         "org_id": "int",
         "overall_state_modified": "int",
-        "priority": "int",
+        "priority": "NoneType",
         "quality_issues": [
           "<empty_list>"
         ],
@@ -77,8 +76,7 @@
         ],
         "scheduling_type": "str",
         "scopes": [
-          "<list>",
-          "str"
+          "<empty_list>"
         ],
         "status": "str",
         "tags": [

@@ -22,13 +22,21 @@
         "<list>",
         {
           "description": "str",
-          "full_path": "str",
-          "name": "str",
-          "read_only": "bool",
           "flags": [
             "<list>",
             "<...>"
-          ]
+          ],
+          "full_path": "str",
+          "name": "str",
+          "read_only": "bool"
+        }
+      ],
+      "flags": [
+        "<list>",
+        {
+          "description": "str",
+          "name": "str",
+          "type": "str"
         }
       ]
     }

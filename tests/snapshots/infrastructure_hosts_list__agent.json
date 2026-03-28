@@ -19,7 +19,10 @@
         "is_muted": "bool",
         "last_reported_time": "int",
         "meta": {
-          "*": "str"
+          "*": [
+            "<list>",
+            "<...>"
+          ]
         },
         "metrics": {
           "*": "float"

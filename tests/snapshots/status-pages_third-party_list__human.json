@@ -12,7 +12,6 @@
       "<list>",
       {
         "end": "int",
-        "impacted_region": "str",
         "start": "int",
         "status": "str"
       }

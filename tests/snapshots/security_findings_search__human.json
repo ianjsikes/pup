@@ -1,17 +1,9 @@
 {
   "data": [
-    "<list>",
-    {
-      "attributes": {
-        "*": "<...>"
-      },
-      "id": "str",
-      "type": "str"
-    }
+    "<empty_list>"
   ],
   "meta": {
     "*": {
-      "cursor": "str",
       "total_filtered_count": "int"
     }
   }

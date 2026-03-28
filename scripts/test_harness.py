@@ -1109,9 +1109,7 @@ READ_COMMANDS: list[dict] = [
         "label": "obs-pipelines list",
         "args": ["obs-pipelines", "list"],
         "category": "auth_required",
-        "expect_json": False,
-        "expect_exit": 1,
-        "note": "pup stub: 'obs-pipelines commands are not yet implemented'. Tracked here to detect when it ships.",
+        "expect_json": True,
     },
     # ── on-call ───────────────────────────────────────────────────────────
     {
@@ -1427,6 +1425,661 @@ READ_COMMANDS: list[dict] = [
         "category": "auth_required",
         "expect_json": True,
     },
+    # ── Newly added: no-ID-required read-only commands ─────────────────────
+    # ── apm troubleshooting ────────────────────────────────────────────────
+    {
+        "label": "apm troubleshooting list",
+        "args": ["apm", "troubleshooting", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── app-builder ────────────────────────────────────────────────────────
+    {
+        "label": "app-builder list",
+        "args": ["app-builder", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── auth ──────────────────────────────────────────────────────────────
+    {
+        "label": "auth list",
+        "args": ["auth", "list"],
+        "category": "no_auth",
+        "expect_json": True,
+        "note": "Lists configured org sessions; no API call required.",
+    },
+    # ── containers ────────────────────────────────────────────────────────
+    {
+        "label": "containers list",
+        "args": ["containers", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "containers images list",
+        "args": ["containers", "images", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── cost cloud configs ─────────────────────────────────────────────────
+    {
+        "label": "cost aws-config list",
+        "args": ["cost", "aws-config", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "cost azure-config list",
+        "args": ["cost", "azure-config", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "cost gcp-config list",
+        "args": ["cost", "gcp-config", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── ddsql ─────────────────────────────────────────────────────────────
+    {
+        "label": "ddsql table",
+        "args": ["ddsql", "table", "--query=SELECT 1"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "ddsql time-series",
+        "args": ["ddsql", "time-series", "--query=SELECT 1"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── integrations (new) ────────────────────────────────────────────────
+    {
+        "label": "integrations list",
+        "args": ["integrations", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "integrations aws cloud-auth persona-mappings list",
+        "args": ["integrations", "aws", "cloud-auth", "persona-mappings", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "integrations google-chat handles list",
+        "args": ["integrations", "google-chat", "handles", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── llm-obs ───────────────────────────────────────────────────────────
+    {
+        "label": "llm-obs datasets list",
+        "args": ["llm-obs", "datasets", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "llm-obs experiments list",
+        "args": ["llm-obs", "experiments", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "llm-obs projects list",
+        "args": ["llm-obs", "projects", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "llm-obs spans search",
+        "args": ["llm-obs", "spans", "search", "--from=1h", "--query=*"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── reference-tables ──────────────────────────────────────────────────
+    {
+        "label": "reference-tables list",
+        "args": ["reference-tables", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── security suppressions ─────────────────────────────────────────────
+    {
+        "label": "security suppressions list",
+        "args": ["security", "suppressions", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── skills ────────────────────────────────────────────────────────────
+    {
+        "label": "skills list",
+        "args": ["skills", "list"],
+        "category": "no_auth",
+        "expect_json": True,
+    },
+    {
+        "label": "skills path",
+        "args": ["skills", "path"],
+        "category": "no_auth",
+        "expect_json": False,
+    },
+    # ── status-pages (new) ────────────────────────────────────────────────
+    {
+        "label": "status-pages maintenances list",
+        "args": ["status-pages", "maintenances", "list"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── Newly added: ID-dependent commands (resolved via id_from) ──────────
+    # ── api-keys get ──────────────────────────────────────────────────────
+    {
+        "label": "api-keys get",
+        "args": ["api-keys", "get", "{id}"],
+        "id_from": {"args": ["api-keys", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── app-builder get ───────────────────────────────────────────────────
+    {
+        "label": "app-builder get",
+        "args": ["app-builder", "get", "{id}"],
+        "id_from": {"args": ["app-builder", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── app-keys get ──────────────────────────────────────────────────────
+    {
+        "label": "app-keys get",
+        "args": ["app-keys", "get", "{id}"],
+        "id_from": {"args": ["app-keys", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── cases get ─────────────────────────────────────────────────────────
+    {
+        "label": "cases get",
+        "args": ["cases", "get", "{id}"],
+        "id_from": {"args": ["cases", "search", "--query=*"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "cases projects get",
+        "args": ["cases", "projects", "get", "{id}"],
+        "id_from": {"args": ["cases", "projects", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "cases projects notification-rules list",
+        "args": ["cases", "projects", "notification-rules", "list", "{id}"],
+        "id_from": {"args": ["cases", "projects", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── cicd pipelines get ────────────────────────────────────────────────
+    {
+        "label": "cicd pipelines get",
+        "args": ["cicd", "pipelines", "get", "{id}"],
+        "id_from": {"args": ["cicd", "pipelines", "list", "--from=1h"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── cloud oci tenancies get ───────────────────────────────────────────
+    {
+        "label": "cloud oci tenancies get",
+        "args": ["cloud", "oci", "tenancies", "get", "{id}"],
+        "id_from": {"args": ["cloud", "oci", "tenancies", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── cost cloud config gets ────────────────────────────────────────────
+    {
+        "label": "cost aws-config get",
+        "args": ["cost", "aws-config", "get", "{id}"],
+        "id_from": {"args": ["cost", "aws-config", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "cost azure-config get",
+        "args": ["cost", "azure-config", "get", "{id}"],
+        "id_from": {"args": ["cost", "azure-config", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "cost gcp-config get",
+        "args": ["cost", "gcp-config", "get", "{id}"],
+        "id_from": {"args": ["cost", "gcp-config", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── dashboards get ────────────────────────────────────────────────────
+    {
+        "label": "dashboards get",
+        "args": ["dashboards", "get", "{id}"],
+        "id_from": {"args": ["dashboards", "list"], "json_path": ["dashboards", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── downtime get ──────────────────────────────────────────────────────
+    {
+        "label": "downtime get",
+        "args": ["downtime", "get", "{id}"],
+        "id_from": {"args": ["downtime", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── error-tracking issues get ─────────────────────────────────────────
+    {
+        "label": "error-tracking issues get",
+        "args": ["error-tracking", "issues", "get", "{id}"],
+        "id_from": {
+            "args": ["error-tracking", "issues", "search", "--from=1h", "--query=*"],
+            "json_path": ["data", 0, "id"],
+        },
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── events get ────────────────────────────────────────────────────────
+    {
+        "label": "events get",
+        "args": ["events", "get", "{id}"],
+        "id_from": {"args": ["events", "list", "--from=1h"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── fleet get commands ────────────────────────────────────────────────
+    {
+        "label": "fleet agents get",
+        "args": ["fleet", "agents", "get", "{id}"],
+        "id_from": {"args": ["fleet", "agents", "list"], "json_path": ["data", "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+        "note": "fleet agents list returns a single agent object (data is a dict, not a list).",
+    },
+    {
+        "label": "fleet deployments get",
+        "args": ["fleet", "deployments", "get", "{id}"],
+        "id_from": {"args": ["fleet", "deployments", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "fleet schedules get",
+        "args": ["fleet", "schedules", "get", "{id}"],
+        "id_from": {"args": ["fleet", "schedules", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── incidents get commands ────────────────────────────────────────────
+    {
+        "label": "incidents get",
+        "args": ["incidents", "get", "{id}"],
+        "id_from": {"args": ["incidents", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "incidents attachments list",
+        "args": ["incidents", "attachments", "list", "{id}"],
+        "id_from": {"args": ["incidents", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "incidents postmortem-templates get",
+        "args": ["incidents", "postmortem-templates", "get", "{id}"],
+        "id_from": {
+            "args": ["incidents", "postmortem-templates", "list"],
+            "json_path": ["data", 0, "id"],
+        },
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── infrastructure hosts get ──────────────────────────────────────────
+    {
+        "label": "infrastructure hosts get",
+        "args": ["infrastructure", "hosts", "get", "{id}"],
+        "id_from": {"args": ["infrastructure", "hosts", "list"], "json_path": ["host_list", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── integrations get commands ─────────────────────────────────────────
+    {
+        "label": "integrations aws cloud-auth persona-mappings get",
+        "args": ["integrations", "aws", "cloud-auth", "persona-mappings", "get", "{id}"],
+        "id_from": {
+            "args": ["integrations", "aws", "cloud-auth", "persona-mappings", "list"],
+            "json_path": ["data", 0, "id"],
+        },
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "integrations google-chat handles get",
+        "args": ["integrations", "google-chat", "handles", "get", "{id}"],
+        "id_from": {
+            "args": ["integrations", "google-chat", "handles", "list"],
+            "json_path": ["data", 0, "id"],
+        },
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── investigations get ────────────────────────────────────────────────
+    {
+        "label": "investigations get",
+        "args": ["investigations", "get", "{id}"],
+        "id_from": {"args": ["investigations", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── llm-obs experiment commands ───────────────────────────────────────
+    {
+        "label": "llm-obs experiments dimension-values",
+        "args": ["llm-obs", "experiments", "dimension-values", "{id}"],
+        "id_from": {"args": ["llm-obs", "experiments", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "llm-obs experiments events list",
+        "args": ["llm-obs", "experiments", "events", "list", "{id}"],
+        "id_from": {"args": ["llm-obs", "experiments", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "llm-obs experiments summary",
+        "args": ["llm-obs", "experiments", "summary", "{id}"],
+        "id_from": {"args": ["llm-obs", "experiments", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "llm-obs experiments metric-values",
+        "args": ["llm-obs", "experiments", "metric-values", "{id}"],
+        "id_from": {"args": ["llm-obs", "experiments", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── logs get commands ─────────────────────────────────────────────────
+    {
+        "label": "logs archives get",
+        "args": ["logs", "archives", "get", "{id}"],
+        "id_from": {"args": ["logs", "archives", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "logs custom-destinations get",
+        "args": ["logs", "custom-destinations", "get", "{id}"],
+        "id_from": {"args": ["logs", "custom-destinations", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "logs metrics get",
+        "args": ["logs", "metrics", "get", "{id}"],
+        "id_from": {"args": ["logs", "metrics", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "logs restriction-queries get",
+        "args": ["logs", "restriction-queries", "get", "{id}"],
+        "id_from": {"args": ["logs", "restriction-queries", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── monitors get ──────────────────────────────────────────────────────
+    {
+        "label": "monitors get",
+        "args": ["monitors", "get", "{id}"],
+        "id_from": {"args": ["monitors", "list"], "json_path": [0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+        "note": "monitors list returns a raw JSON array (not wrapped in data:); json_path indexes directly into the list.",
+    },
+    # ── network device commands ───────────────────────────────────────────
+    {
+        "label": "network devices get",
+        "args": ["network", "devices", "get", "{id}"],
+        "id_from": {"args": ["network", "devices", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "network devices interfaces",
+        "args": ["network", "devices", "interfaces", "{id}"],
+        "id_from": {"args": ["network", "devices", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "network devices tags list",
+        "args": ["network", "devices", "tags", "list", "{id}"],
+        "id_from": {"args": ["network", "devices", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── network interfaces list ───────────────────────────────────────────
+    {
+        "label": "network interfaces list",
+        "args": ["network", "interfaces", "list", "{id}"],
+        "id_from": {"args": ["network", "devices", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── notebooks get ─────────────────────────────────────────────────────
+    {
+        "label": "notebooks get",
+        "args": ["notebooks", "get", "{id}"],
+        "id_from": {"args": ["notebooks", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── obs-pipelines get ─────────────────────────────────────────────────
+    {
+        "label": "obs-pipelines get",
+        "args": ["obs-pipelines", "get", "{id}"],
+        "id_from": {"args": ["obs-pipelines", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── on-call commands ──────────────────────────────────────────────────
+    {
+        "label": "on-call teams get",
+        "args": ["on-call", "teams", "get", "{id}"],
+        "id_from": {"args": ["on-call", "teams", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "on-call teams memberships list",
+        "args": ["on-call", "teams", "memberships", "list", "{id}"],
+        "id_from": {"args": ["on-call", "teams", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── reference-tables get ──────────────────────────────────────────────
+    {
+        "label": "reference-tables get",
+        "args": ["reference-tables", "get", "{id}"],
+        "id_from": {"args": ["reference-tables", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── rum get commands ──────────────────────────────────────────────────
+    {
+        "label": "rum apps get",
+        "args": ["rum", "apps", "get", "{id}"],
+        "id_from": {"args": ["rum", "apps", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "rum metrics get",
+        "args": ["rum", "metrics", "get", "{id}"],
+        "id_from": {"args": ["rum", "metrics", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "rum playlists get",
+        "args": ["rum", "playlists", "get", "{id}"],
+        "id_from": {"args": ["rum", "playlists", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "rum retention-filters get",
+        "args": ["rum", "retention-filters", "get", "ac8218cf-498b-4d33-bd44-151095959547", "{id}"],
+        "id_from": {
+            "args": ["rum", "retention-filters", "list", "ac8218cf-498b-4d33-bd44-151095959547"],
+            "json_path": ["data", 0, "id"],
+        },
+        "category": "auth_required",
+        "expect_json": True,
+        "note": "Uses the org's primary browser RUM app ID (same hardcoded ID as retention-filters list).",
+    },
+    # ── security get commands ─────────────────────────────────────────────
+    {
+        "label": "security rules get",
+        "args": ["security", "rules", "get", "{id}"],
+        "id_from": {"args": ["security", "rules", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "security suppressions get",
+        "args": ["security", "suppressions", "get", "{id}"],
+        "id_from": {"args": ["security", "suppressions", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── service-catalog get ───────────────────────────────────────────────
+    {
+        "label": "service-catalog get",
+        "args": ["service-catalog", "get", "{id}"],
+        "id_from": {
+            "args": ["service-catalog", "list"],
+            "json_path": ["data", 0, "attributes", "schema", "dd-service"],
+        },
+        "category": "auth_required",
+        "expect_json": True,
+        "skip_regression": True,
+        "note": "Uses dd-service name from the first catalog entry; may vary across orgs.",
+    },
+    # ── slos get/status ───────────────────────────────────────────────────
+    {
+        "label": "slos get",
+        "args": ["slos", "get", "{id}"],
+        "id_from": {"args": ["slos", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "slos status",
+        "args": ["slos", "status", "--from=1h", "--to=now", "{id}"],
+        "id_from": {"args": ["slos", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── static-analysis get commands ──────────────────────────────────────
+    {
+        "label": "static-analysis ast get",
+        "args": ["static-analysis", "ast", "get", "{id}"],
+        "id_from": {"args": ["static-analysis", "ast", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "static-analysis coverage get",
+        "args": ["static-analysis", "coverage", "get", "{id}"],
+        "id_from": {"args": ["static-analysis", "coverage", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "static-analysis custom-rulesets get",
+        "args": ["static-analysis", "custom-rulesets", "get", "{id}"],
+        "id_from": {
+            "args": ["static-analysis", "custom-rulesets", "list"],
+            "json_path": ["data", 0, "id"],
+        },
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "static-analysis sca get",
+        "args": ["static-analysis", "sca", "get", "{id}"],
+        "id_from": {"args": ["static-analysis", "sca", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── status-pages get commands ─────────────────────────────────────────
+    {
+        "label": "status-pages pages get",
+        "args": ["status-pages", "pages", "get", "{id}"],
+        "id_from": {"args": ["status-pages", "pages", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "status-pages components list",
+        "args": ["status-pages", "components", "list", "{id}"],
+        "id_from": {"args": ["status-pages", "pages", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "status-pages components get",
+        "args": ["status-pages", "components", "get", "{id}"],
+        "id_from": {"args": ["status-pages", "degradations", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+        "note": "Uses a degradation/component ID from degradations list; skip if list is empty.",
+    },
+    {
+        "label": "status-pages degradations get",
+        "args": ["status-pages", "degradations", "get", "{id}"],
+        "id_from": {"args": ["status-pages", "degradations", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "status-pages maintenances get",
+        "args": ["status-pages", "maintenances", "get", "{id}"],
+        "id_from": {"args": ["status-pages", "maintenances", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── synthetics get commands ───────────────────────────────────────────
+    {
+        "label": "synthetics suites get",
+        "args": ["synthetics", "suites", "get", "{id}"],
+        "id_from": {"args": ["synthetics", "suites", "list", "--query=*"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    {
+        "label": "synthetics tests get",
+        "args": ["synthetics", "tests", "get", "{id}"],
+        "id_from": {"args": ["synthetics", "tests", "list"], "json_path": ["tests", 0, "public_id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
+    # ── users get ─────────────────────────────────────────────────────────
+    {
+        "label": "users get",
+        "args": ["users", "get", "{id}"],
+        "id_from": {"args": ["users", "list"], "json_path": ["data", 0, "id"]},
+        "category": "auth_required",
+        "expect_json": True,
+    },
 ]
 
 
@@ -1654,6 +2307,49 @@ def run_command(
     except Exception as exc:
         elapsed = (time.monotonic() - start) * 1000
         return -2, "", f"RUNNER ERROR: {exc}", elapsed
+
+
+# ── dynamic ID resolution ─────────────────────────────────────────────────────
+
+def resolve_id(
+    id_from: dict,
+    env: dict[str, str],
+    cache: dict,
+    timeout: int,
+) -> str | None:
+    """
+    Run a helper pup command, parse its JSON output, and traverse json_path to
+    extract a resource ID.  Results are cached by args tuple so the same list
+    command is never re-run within a harness invocation.
+
+    id_from schema:
+      {
+        "args":      ["monitors", "list"],     # pup args to run
+        "json_path": [0, "id"],                # key/index path into parsed JSON
+      }
+
+    Returns the ID as a string, or None if the command fails, returns no data,
+    or the path cannot be traversed.
+    """
+    key = tuple(id_from["args"])
+    if key in cache:
+        return cache[key]
+
+    exit_code, stdout, _, _ = run_command(BINARY, list(id_from["args"]), timeout, env)
+    if exit_code != 0 or not stdout.strip():
+        cache[key] = None
+        return None
+
+    try:
+        obj: Any = json.loads(stdout.strip())
+        for step in id_from["json_path"]:
+            obj = obj[step]
+        result = str(obj)
+        cache[key] = result
+        return result
+    except Exception:
+        cache[key] = None
+        return None
 
 
 # ── untested command discovery ────────────────────────────────────────────────
@@ -2321,11 +3017,14 @@ def main() -> int:
 
     print(f"▶ Running {len(tests)} tests × 2 modes (timeout: {args.timeout}s each)…\n")
 
+    # Cache for id_from resolutions — keyed by tuple(args), always resolved
+    # using human_env since resource IDs are identical across modes.
+    id_cache: dict[tuple, str | None] = {}
+
     for mode, env in [("human", human_env), ("agent", agent_env)]:
         print(f"  ── {mode.upper()} mode {'─'*20}")
         for i, tc in enumerate(tests):
             label           = tc["label"]
-            test_args       = tc["args"]
             category        = tc.get("category", "auth_required")
             expect_json     = tc.get("expect_json", True)
             expect_exit     = tc.get("expect_exit", None)
@@ -2335,6 +3034,25 @@ def main() -> int:
             cmd_timeout          = tc.get("timeout", args.timeout)
 
             print(f"  [{i+1:3d}/{len(tests)}] {label} … ", end="", flush=True)
+
+            # Resolve {id} placeholder via id_from before running the test.
+            test_args = list(tc["args"])
+            id_from_spec = tc.get("id_from")
+            if id_from_spec and any("{id}" in a for a in test_args):
+                resolved = resolve_id(id_from_spec, human_env, id_cache, cmd_timeout)
+                if resolved is None:
+                    skip_msg = f"id_from: no ID from '{' '.join(id_from_spec['args'])}'"
+                    result = TestResult(
+                        label=label, args=test_args, category=category,
+                        exit_code=0, stdout="", stderr="", duration_ms=0,
+                        note=note, mode=mode,
+                    )
+                    result.skipped = True
+                    result.skip_reason = skip_msg
+                    print(f"- ({skip_msg})")
+                    results.append(result)
+                    continue
+                test_args = [a.replace("{id}", resolved) for a in test_args]
 
             exit_code, stdout, stderr, duration_ms = run_command(
                 BINARY, test_args, cmd_timeout, env,

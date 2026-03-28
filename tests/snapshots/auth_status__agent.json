@@ -2,6 +2,11 @@
   "authenticated": "bool",
   "expires_at": "<timestamp>",
   "has_refresh": "bool",
+  "org": "NoneType",
+  "scopes": [
+    "<list>",
+    "str"
+  ],
   "site": "str",
   "status": "str",
   "token_type": "str"

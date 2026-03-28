@@ -12,14 +12,11 @@
         "str"
       ],
       "aws_id": "str",
-      "aws_name": "str",
       "host_name": "str",
       "id": "int",
       "is_muted": "bool",
       "last_reported_time": "int",
-      "meta": {
-        "*": "str"
-      },
+      "meta": {},
       "metrics": {
         "*": "float"
       },
@@ -35,7 +32,8 @@
           "str"
         ]
       },
-      "up": "bool"
+      "up": "bool",
+      "aws_name": "str"
     }
   ],
   "total_matching": "int",
