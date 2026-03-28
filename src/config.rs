@@ -152,7 +152,11 @@ impl Config {
         if self.site.contains("oncall") {
             self.site.clone()
         } else {
-            format!("api.{}", self.site)
+            // Normalize: strip "app." prefix so users can pass e.g.
+            // "app.datadoghq.com" or "app.ddog-gov.com" and get the
+            // correct API host "api.datadoghq.com" / "api.ddog-gov.com".
+            let base = self.site.strip_prefix("app.").unwrap_or(&self.site);
+            format!("api.{}", base)
         }
     }
 
@@ -342,6 +346,42 @@ mod tests {
         let mut cfg = make_cfg(None, None, Some("t"));
         cfg.site = "navy.oncall.datadoghq.com".into();
         assert_eq!(cfg.api_host(), "navy.oncall.datadoghq.com");
+    }
+
+    #[test]
+    fn test_api_host_app_prefix_us1() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = "app.datadoghq.com".into();
+        assert_eq!(cfg.api_host(), "api.datadoghq.com");
+    }
+
+    #[test]
+    fn test_api_host_app_prefix_eu() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = "app.datadoghq.eu".into();
+        assert_eq!(cfg.api_host(), "api.datadoghq.eu");
+    }
+
+    #[test]
+    fn test_api_host_app_prefix_gov() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = "app.ddog-gov.com".into();
+        assert_eq!(cfg.api_host(), "api.ddog-gov.com");
+    }
+
+    #[test]
+    fn test_api_host_app_prefix_staging() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = "app.datad0g.com".into();
+        assert_eq!(cfg.api_host(), "api.datad0g.com");
     }
 
     #[test]
