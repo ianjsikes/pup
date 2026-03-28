@@ -1,0 +1,27 @@
+{
+  "data": [
+    "<list>",
+    {
+      "attributes": {
+        "*": "<...>"
+      },
+      "id": "<uuid>",
+      "meta": {
+        "*": "<timestamp>"
+      },
+      "type": "str",
+      "relationships": {
+        "*": {
+          "data": {
+            "id": "<...>",
+            "type": "<...>"
+          },
+          "meta": {
+            "*": "<...>"
+          }
+        }
+      }
+    }
+  ],
+  "status": "str"
+}

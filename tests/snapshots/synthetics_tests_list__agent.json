@@ -29,6 +29,9 @@
         "monitor_id": "int",
         "name": "str",
         "options": {
+          "downtime_ids": [
+            "<empty_list>"
+          ],
           "httpVersion": "str",
           "min_failure_duration": "int",
           "min_location_failed": "int",

@@ -7,13 +7,17 @@
       "subcommands": [
         "<list>",
         {
-          "full_path": "str",
-          "name": "str",
           "flags": [
             "<list>",
             "<...>"
-          ]
+          ],
+          "full_path": "str",
+          "name": "str"
         }
+      ],
+      "flags": [
+        "<list>",
+        "str"
       ]
     }
   ],

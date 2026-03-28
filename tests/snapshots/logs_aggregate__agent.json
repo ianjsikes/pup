@@ -5,7 +5,7 @@
       {
         "by": {},
         "computes": {
-          "c0": "float"
+          "c0": "int"
         }
       }
     ]

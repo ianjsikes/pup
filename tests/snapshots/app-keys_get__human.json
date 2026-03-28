@@ -1,0 +1,32 @@
+{
+  "data": {
+    "attributes": {
+      "*": "<...>"
+    },
+    "id": "<uuid>",
+    "relationships": {
+      "*": {
+        "data": "NoneType"
+      }
+    },
+    "type": "str"
+  },
+  "included": [
+    "<list>",
+    {
+      "attributes": {
+        "*": "<...>"
+      },
+      "id": "<uuid>",
+      "relationships": {
+        "*": {
+          "data": [
+            "<list>",
+            "<...>"
+          ]
+        }
+      },
+      "type": "str"
+    }
+  ]
+}

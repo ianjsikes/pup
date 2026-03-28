@@ -1,5 +1,22 @@
 {
-  "data": [
+  "data": {
+    "attributes": {
+      "*": "<...>"
+    },
+    "relationships": {
+      "*": {
+        "data": [
+          "<list>",
+          {
+            "id": "<...>",
+            "type": "<...>"
+          }
+        ]
+      }
+    },
+    "type": "str"
+  },
+  "included": [
     "<list>",
     {
       "attributes": {
@@ -9,8 +26,7 @@
       "relationships": {
         "*": {
           "data": [
-            "<list>",
-            "<...>"
+            "<empty_list>"
           ]
         }
       },

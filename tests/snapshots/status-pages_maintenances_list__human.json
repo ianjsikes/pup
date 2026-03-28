@@ -1,0 +1,17 @@
+{
+  "data": [
+    "<empty_list>"
+  ],
+  "meta": {
+    "*": {
+      "first_offset": "int",
+      "last_offset": "int",
+      "limit": "int",
+      "next_offset": "NoneType",
+      "offset": "int",
+      "prev_offset": "NoneType",
+      "total": "int",
+      "type": "str"
+    }
+  }
+}

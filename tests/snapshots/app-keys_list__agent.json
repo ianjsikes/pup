@@ -1,0 +1,18 @@
+{
+  "data": [
+    "<list>",
+    {
+      "attributes": {
+        "*": "<...>"
+      },
+      "id": "<uuid>",
+      "relationships": {
+        "*": {
+          "data": "NoneType"
+        }
+      },
+      "type": "str"
+    }
+  ],
+  "status": "str"
+}

@@ -11,9 +11,7 @@
   ],
   "metadata": {
     "command": "str",
-    "count": "int",
-    "next_action": "str",
-    "truncated": "bool"
+    "count": "int"
   },
   "status": "str"
 }

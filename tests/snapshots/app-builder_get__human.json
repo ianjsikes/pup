@@ -1,0 +1,12 @@
+{
+  "data": {
+    "attributes": {
+      "*": "<...>"
+    },
+    "id": "<uuid>",
+    "meta": {
+      "*": "<timestamp>"
+    },
+    "type": "str"
+  }
+}

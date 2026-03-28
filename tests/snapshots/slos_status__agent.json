@@ -1,0 +1,10 @@
+{
+  "data": {
+    "attributes": {
+      "*": "<...>"
+    },
+    "id": "<hash>",
+    "type": "str"
+  },
+  "status": "str"
+}
