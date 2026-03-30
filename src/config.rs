@@ -87,7 +87,9 @@ impl Config {
         let file_cfg = load_config_file().unwrap_or_default();
 
         let access_token = env_or("DD_ACCESS_TOKEN", file_cfg.access_token);
-        let site = env_or("DD_SITE", file_cfg.site).unwrap_or_else(|| "datadoghq.com".into());
+        let site = normalize_site(
+            &env_or("DD_SITE", file_cfg.site).unwrap_or_else(|| "datadoghq.com".into()),
+        );
         let org = env_or("DD_ORG", file_cfg.org); // flag override applied in main_inner
 
         // If no token from env/file, try loading from keychain/storage (where `pup auth login` saves)
@@ -128,7 +130,7 @@ impl Config {
             api_key,
             app_key,
             access_token,
-            site,
+            site: normalize_site(&site),
             org: None,
             output_format: OutputFormat::Json,
             auto_approve: false,
@@ -364,6 +366,47 @@ where
     }
 }
 
+/// Normalize a raw site value from user input into a canonical form.
+///
+/// Rules (applied in order):
+/// 1. Oncall sites (`navy.oncall.datadoghq.com`) are passed through unchanged —
+///    they are already fully-qualified API hosts.
+/// 2. Split the domain into labels and determine how many trailing labels to keep:
+///    - If the 3rd-from-last label matches `[a-z]{2}[0-9]+` (a regional prefix
+///      like `us3`, `eu1`, `ap1`) keep the last **3** labels.
+///    - Otherwise keep the last **2** labels.
+///
+/// Examples:
+///   `app.datadoghq.com`     → `datadoghq.com`
+///   `app.us3.datadoghq.com` → `us3.datadoghq.com`
+///   `us3.datadoghq.com`     → `us3.datadoghq.com`
+///   `datadoghq.com`         → `datadoghq.com`
+pub fn normalize_site(site: &str) -> String {
+    if site.contains("oncall") {
+        return site.to_string();
+    }
+    let parts: Vec<&str> = site.split('.').collect();
+    let n = parts.len();
+    if n < 2 {
+        return site.to_string();
+    }
+    let keep_from = if n >= 3 && is_region_prefix(parts[n - 3]) {
+        n - 3
+    } else {
+        n - 2
+    };
+    parts[keep_from..].join(".")
+}
+
+/// Returns true if `s` matches the pattern `[a-z]{2}[0-9]+` (e.g. "us3", "eu1", "ap1").
+fn is_region_prefix(s: &str) -> bool {
+    let b = s.as_bytes();
+    b.len() >= 3
+        && b[0].is_ascii_lowercase()
+        && b[1].is_ascii_lowercase()
+        && b[2..].iter().all(|c| c.is_ascii_digit())
+}
+
 #[cfg(not(feature = "browser"))]
 fn env_or(key: &str, fallback: Option<String>) -> Option<String> {
     std::env::var(key)
@@ -523,6 +566,122 @@ mod tests {
         let mut cfg = make_cfg(None, None, Some("t"));
         cfg.site = "navy.oncall.datadoghq.com".into();
         assert_eq!(cfg.api_host(), "navy.oncall.datadoghq.com");
+    }
+
+    // --- normalize_site unit tests ---
+
+    #[test]
+    fn test_normalize_site_plain() {
+        assert_eq!(normalize_site("datadoghq.com"), "datadoghq.com");
+    }
+
+    #[test]
+    fn test_normalize_site_app_prefix() {
+        assert_eq!(normalize_site("app.datadoghq.com"), "datadoghq.com");
+    }
+
+    #[test]
+    fn test_normalize_site_app_prefix_eu() {
+        assert_eq!(normalize_site("app.datadoghq.eu"), "datadoghq.eu");
+    }
+
+    #[test]
+    fn test_normalize_site_app_prefix_gov() {
+        assert_eq!(normalize_site("app.ddog-gov.com"), "ddog-gov.com");
+    }
+
+    #[test]
+    fn test_normalize_site_app_prefix_staging() {
+        assert_eq!(normalize_site("app.datad0g.com"), "datad0g.com");
+    }
+
+    #[test]
+    fn test_normalize_site_region_prefix() {
+        assert_eq!(normalize_site("us3.datadoghq.com"), "us3.datadoghq.com");
+    }
+
+    #[test]
+    fn test_normalize_site_app_and_region_prefix() {
+        assert_eq!(normalize_site("app.us3.datadoghq.com"), "us3.datadoghq.com");
+    }
+
+    #[test]
+    fn test_normalize_site_eu1_region() {
+        assert_eq!(normalize_site("eu1.datadoghq.com"), "eu1.datadoghq.com");
+    }
+
+    #[test]
+    fn test_normalize_site_app_eu1_region() {
+        assert_eq!(normalize_site("app.eu1.datadoghq.com"), "eu1.datadoghq.com");
+    }
+
+    #[test]
+    fn test_normalize_site_ap1_region() {
+        assert_eq!(normalize_site("ap1.datadoghq.com"), "ap1.datadoghq.com");
+    }
+
+    #[test]
+    fn test_normalize_site_oncall_passthrough() {
+        assert_eq!(
+            normalize_site("navy.oncall.datadoghq.com"),
+            "navy.oncall.datadoghq.com"
+        );
+    }
+
+    // --- api_host tests (site already normalized at construction) ---
+
+    #[test]
+    fn test_api_host_app_prefix_us1() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = normalize_site("app.datadoghq.com");
+        assert_eq!(cfg.api_host(), "api.datadoghq.com");
+    }
+
+    #[test]
+    fn test_api_host_app_prefix_eu() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = normalize_site("app.datadoghq.eu");
+        assert_eq!(cfg.api_host(), "api.datadoghq.eu");
+    }
+
+    #[test]
+    fn test_api_host_app_prefix_gov() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = normalize_site("app.ddog-gov.com");
+        assert_eq!(cfg.api_host(), "api.ddog-gov.com");
+    }
+
+    #[test]
+    fn test_api_host_app_prefix_staging() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = normalize_site("app.datad0g.com");
+        assert_eq!(cfg.api_host(), "api.datad0g.com");
+    }
+
+    #[test]
+    fn test_api_host_region_us3() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = normalize_site("us3.datadoghq.com");
+        assert_eq!(cfg.api_host(), "api.us3.datadoghq.com");
+    }
+
+    #[test]
+    fn test_api_host_app_region_us3() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        std::env::remove_var("PUP_MOCK_SERVER");
+        let mut cfg = make_cfg(None, None, Some("t"));
+        cfg.site = normalize_site("app.us3.datadoghq.com");
+        assert_eq!(cfg.api_host(), "api.us3.datadoghq.com");
     }
 
     #[test]
