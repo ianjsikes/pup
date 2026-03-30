@@ -102,19 +102,19 @@ pub fn describe(cfg: &Config, name: &str) -> Result<()> {
 }
 
 /// Execute a runbook with optional variable overrides.
-pub async fn run(cfg: &Config, name: &str, set: Vec<String>, _yes: bool) -> Result<()> {
+pub async fn run(cfg: &Config, name: &str, args: Vec<String>, _yes: bool) -> Result<()> {
     let runbook = loader::load_runbook(cfg, name)?;
 
-    // Parse --set KEY=VALUE pairs
+    // Parse --arg KEY=VALUE pairs
     let mut vars: HashMap<String, String> = HashMap::new();
-    for kv in &set {
+    for kv in &args {
         let mut parts = kv.splitn(2, '=');
         let key = parts
             .next()
-            .ok_or_else(|| anyhow::anyhow!("invalid --set value '{kv}': expected KEY=VALUE"))?;
+            .ok_or_else(|| anyhow::anyhow!("invalid --arg value '{kv}': expected KEY=VALUE"))?;
         let val = parts
             .next()
-            .ok_or_else(|| anyhow::anyhow!("invalid --set value '{kv}': expected KEY=VALUE"))?;
+            .ok_or_else(|| anyhow::anyhow!("invalid --arg value '{kv}': expected KEY=VALUE"))?;
         vars.insert(key.to_string(), val.to_string());
     }
 
@@ -182,7 +182,7 @@ pub fn validate(cfg: &Config, name: &str) -> Result<()> {
             let required = def.required.unwrap_or(true);
             if required && def.default.is_none() {
                 errors.push(format!(
-                    "var '{k}': required but has no default (provide with --set {k}=value)"
+                    "var '{k}': required but has no default (provide with --arg {k}=value)"
                 ));
             }
         }

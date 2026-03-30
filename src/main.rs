@@ -1986,7 +1986,7 @@ enum Commands {
     ///   pup runbooks list --tag=type:deployment
     ///
     ///   # Run a runbook with variable overrides
-    ///   pup runbooks run deploy-service --set SERVICE=payments --set VERSION=1.2.3
+    ///   pup runbooks run deploy-service --arg SERVICE=payments --arg VERSION=1.2.3
     ///
     ///   # Validate without executing
     ///   pup runbooks validate deploy-service
@@ -5499,7 +5499,7 @@ enum RunbookActions {
     Run {
         name: String,
         #[arg(long, help = "Set a variable: KEY=VALUE", action = clap::ArgAction::Append)]
-        set: Vec<String>,
+        arg: Vec<String>,
     },
     /// Validate a runbook without executing
     Validate { name: String },
@@ -8353,8 +8353,8 @@ async fn main_inner() -> anyhow::Result<()> {
             RunbookActions::Describe { name } => {
                 commands::runbooks::describe(&cfg, &name)?;
             }
-            RunbookActions::Run { name, set } => {
-                commands::runbooks::run(&cfg, &name, set, cfg.auto_approve).await?;
+            RunbookActions::Run { name, arg } => {
+                commands::runbooks::run(&cfg, &name, arg, cfg.auto_approve).await?;
             }
             RunbookActions::Validate { name } => {
                 commands::runbooks::validate(&cfg, &name)?;

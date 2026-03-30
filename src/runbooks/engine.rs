@@ -73,7 +73,7 @@ pub async fn run(cfg: &Config, runbook: &Runbook, vars: HashMap<String, String>)
     let total = runbook.steps.len();
     let mut step_vars = vars;
 
-    // Pre-fill defaults for vars not provided by --set
+    // Pre-fill defaults for vars not provided by --arg
     if let Some(var_defs) = &runbook.vars {
         for (k, def) in var_defs {
             if !step_vars.contains_key(k) {
