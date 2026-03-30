@@ -1,14 +1,16 @@
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+
 #[cfg(not(target_arch = "wasm32"))]
 use async_trait::async_trait;
 #[cfg(not(target_arch = "wasm32"))]
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware, Middleware, Next};
+use reqwest_middleware::{Middleware, Next};
 #[cfg(not(target_arch = "wasm32"))]
 use task_local_extensions::Extensions;
 
 use crate::config::Config;
 
 // ---------------------------------------------------------------------------
-// Bearer token middleware (native only)
+// Bearer token middleware (native only — requires task-local-extensions)
 // ---------------------------------------------------------------------------
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -34,20 +36,42 @@ impl Middleware for BearerAuthMiddleware {
 }
 
 // ---------------------------------------------------------------------------
-// DD Configuration builder (native only)
+// DD Configuration builder
 // ---------------------------------------------------------------------------
 
 /// Creates a DD API Configuration with all unstable ops enabled.
-/// `Configuration::new()` reads DD_API_KEY, DD_APP_KEY, DD_SITE from env.
+///
+/// Explicitly injects `cfg` credentials so API key auth works on targets where
+/// `std::env::var` is unavailable (e.g. wasm32-unknown-unknown).
 ///
 /// If PUP_MOCK_SERVER is set, redirects all API calls to the mock server.
-#[cfg(not(target_arch = "wasm32"))]
-pub fn make_dd_config(_cfg: &Config) -> datadog_api_client::datadog::Configuration {
+pub fn make_dd_config(cfg: &Config) -> datadog_api_client::datadog::Configuration {
     let mut dd_cfg = datadog_api_client::datadog::Configuration::new();
 
-    // Enable all 63 unstable operations (snake_case in Rust client)
+    // Enable all unstable operations.
     for op in UNSTABLE_OPS {
         dd_cfg.set_unstable_operation_enabled(op, true);
+    }
+
+    // Inject auth from cfg — supplements env vars and is required on WASM
+    // targets where std::env::var always returns Err.
+    if let Some(api_key) = &cfg.api_key {
+        dd_cfg.set_auth_key(
+            "apiKeyAuth",
+            datadog_api_client::datadog::APIKey {
+                key: api_key.clone(),
+                prefix: "".to_owned(),
+            },
+        );
+    }
+    if let Some(app_key) = &cfg.app_key {
+        dd_cfg.set_auth_key(
+            "appKeyAuth",
+            datadog_api_client::datadog::APIKey {
+                key: app_key.clone(),
+                prefix: "".to_owned(),
+            },
+        );
     }
 
     // If PUP_MOCK_SERVER is set, redirect all requests to the mock server.
@@ -89,27 +113,29 @@ pub fn make_dd_config(_cfg: &Config) -> datadog_api_client::datadog::Configurati
     dd_cfg
 }
 
-/// Creates a reqwest middleware client with bearer token injection.
-/// Returns None if no bearer token is configured.
-#[cfg(not(target_arch = "wasm32"))]
+/// Creates a reqwest middleware client that injects a bearer token on every
+/// request. Returns `None` if no bearer token is configured, or on WASM
+/// targets where the token-injection middleware is unavailable.
 pub fn make_bearer_client(cfg: &Config) -> Option<ClientWithMiddleware> {
-    let token = cfg.access_token.as_ref()?;
-    let reqwest_client = reqwest::Client::builder()
-        .build()
-        .expect("failed to build reqwest client");
-    let client = ClientBuilder::new(reqwest_client)
-        .with(BearerAuthMiddleware {
-            token: token.clone(),
-        })
-        .build();
-    Some(client)
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let token = cfg.access_token.as_ref()?.clone();
+        let reqwest_client = reqwest::Client::builder()
+            .build()
+            .expect("failed to build reqwest client");
+        let client = ClientBuilder::new(reqwest_client)
+            .with(BearerAuthMiddleware { token })
+            .build();
+        return Some(client);
+    }
+    #[allow(unreachable_code)]
+    None
 }
 
 // ---------------------------------------------------------------------------
-// Unstable operations table (native only — used by make_dd_config)
+// Unstable operations table — used by make_dd_config
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 /// All 85 unstable operations (snake_case for the Rust DD client).
 static UNSTABLE_OPS: &[&str] = &[
     // Incidents (16)
@@ -252,23 +278,20 @@ pub fn get_auth_type(cfg: &Config) -> AuthType {
 }
 
 // ---------------------------------------------------------------------------
-// OAuth-excluded endpoint validation (native only)
+// OAuth-excluded endpoint validation
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 struct EndpointRequirement {
     path: &'static str,
     method: &'static str,
 }
 
 /// Returns true if the endpoint doesn't support OAuth and requires API key fallback.
-#[cfg(not(target_arch = "wasm32"))]
 #[allow(dead_code)]
 pub fn requires_api_key_fallback(method: &str, path: &str) -> bool {
     find_endpoint_requirement(method, path).is_some()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn find_endpoint_requirement(method: &str, path: &str) -> Option<&'static EndpointRequirement> {
     OAUTH_EXCLUDED_ENDPOINTS.iter().find(|req| {
         if req.method != method {
@@ -284,12 +307,11 @@ fn find_endpoint_requirement(method: &str, path: &str) -> Option<&'static Endpoi
 }
 
 // ---------------------------------------------------------------------------
-// Static tables (native only)
+// Static tables
 // ---------------------------------------------------------------------------
 
 /// Endpoints that don't support OAuth.
 /// Trailing "/" means prefix match for ID-parameterized paths.
-#[cfg(not(target_arch = "wasm32"))]
 static OAUTH_EXCLUDED_ENDPOINTS: &[EndpointRequirement] = &[
     // API/App Keys (8)
     EndpointRequirement {
@@ -479,7 +501,7 @@ static OAUTH_EXCLUDED_ENDPOINTS: &[EndpointRequirement] = &[
 ];
 
 // ---------------------------------------------------------------------------
-// Raw HTTP helpers (native only)
+// Raw HTTP helpers
 // ---------------------------------------------------------------------------
 
 /// Makes an authenticated GET request directly via reqwest.

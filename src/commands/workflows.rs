@@ -1,12 +1,10 @@
 use anyhow::Result;
 use std::collections::BTreeMap;
 
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_workflow_automation::{
     ListWorkflowInstancesOptionalParams, WorkflowAutomationAPI,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter::{self, Metadata};
@@ -16,7 +14,6 @@ use crate::util;
 // Helper: build a WorkflowAutomationAPI (API key auth only)
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 fn make_api(cfg: &Config) -> WorkflowAutomationAPI {
     let dd_cfg = client::make_dd_config(cfg);
     WorkflowAutomationAPI::with_config(dd_cfg)
@@ -26,7 +23,6 @@ fn make_api(cfg: &Config) -> WorkflowAutomationAPI {
 // Workflow CRUD
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn get(cfg: &Config, workflow_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -36,13 +32,6 @@ pub async fn get(cfg: &Config, workflow_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn get(cfg: &Config, workflow_id: &str) -> Result<()> {
-    let data = crate::api::get(cfg, &format!("/api/v2/workflows/{workflow_id}"), &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn create(cfg: &Config, file: &str) -> Result<()> {
     let body: datadog_api_client::datadogV2::model::CreateWorkflowRequest =
         util::read_json_file(file)?;
@@ -54,14 +43,6 @@ pub async fn create(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn create(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::post(cfg, "/api/v2/workflows", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn update(cfg: &Config, workflow_id: &str, file: &str) -> Result<()> {
     let body: datadog_api_client::datadogV2::model::UpdateWorkflowRequest =
         util::read_json_file(file)?;
@@ -73,14 +54,6 @@ pub async fn update(cfg: &Config, workflow_id: &str, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn update(cfg: &Config, workflow_id: &str, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::patch(cfg, &format!("/api/v2/workflows/{workflow_id}"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn delete(cfg: &Config, workflow_id: &str) -> Result<()> {
     let api = make_api(cfg);
     api.delete_workflow(workflow_id.to_string())
@@ -90,18 +63,10 @@ pub async fn delete(cfg: &Config, workflow_id: &str) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn delete(cfg: &Config, workflow_id: &str) -> Result<()> {
-    crate::api::delete(cfg, &format!("/api/v2/workflows/{workflow_id}")).await?;
-    eprintln!("Workflow {workflow_id} deleted.");
-    Ok(())
-}
-
 // ---------------------------------------------------------------------------
 // Workflow execution (API trigger only — requires DD_API_KEY + DD_APP_KEY)
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn run(
     cfg: &Config,
     workflow_id: &str,
@@ -198,46 +163,10 @@ pub async fn run(
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn run(
-    cfg: &Config,
-    workflow_id: &str,
-    payload: Option<String>,
-    payload_file: Option<String>,
-    _wait: bool,
-    _timeout: &str,
-) -> Result<()> {
-    let body: serde_json::Value = match (&payload, &payload_file) {
-        (Some(_), Some(_)) => {
-            return Err(anyhow::anyhow!(
-                "cannot specify both --payload and --payload-file"
-            ))
-        }
-        (Some(json_str), None) => {
-            let p: serde_json::Value = serde_json::from_str(json_str)?;
-            serde_json::json!({ "meta": { "payload": p } })
-        }
-        (None, Some(path)) => {
-            let contents = std::fs::read_to_string(path)?;
-            let p: serde_json::Value = serde_json::from_str(&contents)?;
-            serde_json::json!({ "meta": { "payload": p } })
-        }
-        (None, None) => serde_json::json!({}),
-    };
-    let data = crate::api::post(
-        cfg,
-        &format!("/api/v2/workflows/{workflow_id}/instances"),
-        &body,
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Workflow instances
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn instance_list(cfg: &Config, workflow_id: &str, limit: i64, page: i64) -> Result<()> {
     let api = make_api(cfg);
 
@@ -262,23 +191,6 @@ pub async fn instance_list(cfg: &Config, workflow_id: &str, limit: i64, page: i6
     formatter::format_and_print(&resp, &cfg.output_format, cfg.agent_mode, Some(&meta))
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn instance_list(cfg: &Config, workflow_id: &str, limit: i64, page: i64) -> Result<()> {
-    let mut query = vec![("page[size]", limit.clamp(1, 100).to_string())];
-    if page > 0 {
-        query.push(("page[number]", page.to_string()));
-    }
-    let q: Vec<(&str, String)> = query;
-    let data = crate::api::get(
-        cfg,
-        &format!("/api/v2/workflows/{workflow_id}/instances"),
-        &q,
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn instance_get(cfg: &Config, workflow_id: &str, instance_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -288,18 +200,6 @@ pub async fn instance_get(cfg: &Config, workflow_id: &str, instance_id: &str) ->
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn instance_get(cfg: &Config, workflow_id: &str, instance_id: &str) -> Result<()> {
-    let data = crate::api::get(
-        cfg,
-        &format!("/api/v2/workflows/{workflow_id}/instances/{instance_id}"),
-        &[],
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn instance_cancel(cfg: &Config, workflow_id: &str, instance_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -307,17 +207,6 @@ pub async fn instance_cancel(cfg: &Config, workflow_id: &str, instance_id: &str)
         .await
         .map_err(|e| anyhow::anyhow!("failed to cancel workflow instance: {:?}", e))?;
     formatter::output(cfg, &resp)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn instance_cancel(cfg: &Config, workflow_id: &str, instance_id: &str) -> Result<()> {
-    let data = crate::api::put(
-        cfg,
-        &format!("/api/v2/workflows/{workflow_id}/instances/{instance_id}/cancel"),
-        &serde_json::json!({}),
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
 }
 
 // ---------------------------------------------------------------------------

@@ -1,15 +1,12 @@
 use anyhow::{bail, Result};
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_incidents::{
     CreateGlobalIncidentHandleOptionalParams, GetIncidentOptionalParams,
     ImportIncidentOptionalParams, IncidentsAPI, ListGlobalIncidentHandlesOptionalParams,
     ListIncidentAttachmentsOptionalParams, SearchIncidentsOptionalParams,
     UpdateGlobalIncidentHandleOptionalParams,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::model::{IncidentImportRequest, IncidentSearchSortOrder};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
@@ -19,7 +16,6 @@ use crate::util;
 // Helper: build an IncidentsAPI with bearer-token support
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 fn make_api(cfg: &Config) -> IncidentsAPI {
     let dd_cfg = client::make_dd_config(cfg);
     match client::make_bearer_client(cfg) {
@@ -32,7 +28,6 @@ fn make_api(cfg: &Config) -> IncidentsAPI {
 // Core incident operations
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn list(cfg: &Config, limit: i64) -> Result<()> {
     let api = make_api(cfg);
     let params = SearchIncidentsOptionalParams::default()
@@ -46,18 +41,6 @@ pub async fn list(cfg: &Config, limit: i64) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn list(cfg: &Config, limit: i64) -> Result<()> {
-    let query_params = vec![
-        ("filter[query]", "state:active".to_string()),
-        ("sort", "-created".to_string()),
-        ("page[size]", limit.to_string()),
-    ];
-    let data = crate::api::get(cfg, "/api/v2/incidents/search", &query_params).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn get(cfg: &Config, incident_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -70,18 +53,10 @@ pub async fn get(cfg: &Config, incident_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn get(cfg: &Config, incident_id: &str) -> Result<()> {
-    let path = format!("/api/v2/incidents/{incident_id}");
-    let data = crate::api::get(cfg, &path, &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Attachments
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn attachments_list(cfg: &Config, incident_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -94,14 +69,6 @@ pub async fn attachments_list(cfg: &Config, incident_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn attachments_list(cfg: &Config, incident_id: &str) -> Result<()> {
-    let path = format!("/api/v2/incidents/{incident_id}/attachments");
-    let data = crate::api::get(cfg, &path, &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn attachments_delete(
     cfg: &Config,
     incident_id: &str,
@@ -136,23 +103,10 @@ pub async fn attachments_delete(
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn attachments_delete(
-    cfg: &Config,
-    incident_id: &str,
-    attachment_id: &str,
-) -> Result<()> {
-    let path = format!("/api/v2/incidents/{incident_id}/attachments/{attachment_id}");
-    crate::api::delete(cfg, &path).await?;
-    println!("Incident attachment {attachment_id} deleted from incident {incident_id}.");
-    Ok(())
-}
-
 // ---------------------------------------------------------------------------
 // Global incident settings
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn settings_get(cfg: &Config) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -162,13 +116,6 @@ pub async fn settings_get(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn settings_get(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v2/incidents/config/settings", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn settings_update(cfg: &Config, file: &str) -> Result<()> {
     let body = util::read_json_file(file)?;
     let api = make_api(cfg);
@@ -179,18 +126,10 @@ pub async fn settings_update(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn settings_update(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::put(cfg, "/api/v2/incidents/config/settings", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---------------------------------------------------------------------------
 // Global incident handles
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn handles_list(cfg: &Config) -> Result<()> {
     let api = make_api(cfg);
     let params = ListGlobalIncidentHandlesOptionalParams::default();
@@ -201,13 +140,6 @@ pub async fn handles_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn handles_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v2/incidents/config/handles", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn handles_create(cfg: &Config, file: &str) -> Result<()> {
     let body = util::read_json_file(file)?;
     let api = make_api(cfg);
@@ -218,14 +150,6 @@ pub async fn handles_create(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn handles_create(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::post(cfg, "/api/v2/incidents/config/handles", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn handles_update(cfg: &Config, file: &str) -> Result<()> {
     let body = util::read_json_file(file)?;
     let api = make_api(cfg);
@@ -236,14 +160,6 @@ pub async fn handles_update(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn handles_update(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::patch(cfg, "/api/v2/incidents/config/handles", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn handles_delete(cfg: &Config, _handle_id: &str) -> Result<()> {
     let api = make_api(cfg);
     api.delete_global_incident_handle()
@@ -253,18 +169,10 @@ pub async fn handles_delete(cfg: &Config, _handle_id: &str) -> Result<()> {
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn handles_delete(cfg: &Config, _handle_id: &str) -> Result<()> {
-    crate::api::delete(cfg, "/api/v2/incidents/config/handles").await?;
-    println!("Incident handle deleted.");
-    Ok(())
-}
-
 // ---------------------------------------------------------------------------
 // Postmortem templates
 // ---------------------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn postmortem_templates_list(cfg: &Config) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -274,13 +182,6 @@ pub async fn postmortem_templates_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn postmortem_templates_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v2/incidents/config/postmortem-templates", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn postmortem_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
     let api = make_api(cfg);
     let resp = api
@@ -290,14 +191,6 @@ pub async fn postmortem_templates_get(cfg: &Config, template_id: &str) -> Result
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn postmortem_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
-    let path = format!("/api/v2/incidents/config/postmortem-templates/{template_id}");
-    let data = crate::api::get(cfg, &path, &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn postmortem_templates_create(cfg: &Config, file: &str) -> Result<()> {
     let body = util::read_json_file(file)?;
     let api = make_api(cfg);
@@ -308,15 +201,6 @@ pub async fn postmortem_templates_create(cfg: &Config, file: &str) -> Result<()>
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn postmortem_templates_create(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data =
-        crate::api::post(cfg, "/api/v2/incidents/config/postmortem-templates", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn postmortem_templates_update(
     cfg: &Config,
     template_id: &str,
@@ -331,19 +215,6 @@ pub async fn postmortem_templates_update(
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn postmortem_templates_update(
-    cfg: &Config,
-    template_id: &str,
-    file: &str,
-) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let path = format!("/api/v2/incidents/config/postmortem-templates/{template_id}");
-    let data = crate::api::patch(cfg, &path, &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn postmortem_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
     let api = make_api(cfg);
     api.delete_incident_postmortem_template(template_id.to_string())
@@ -353,17 +224,8 @@ pub async fn postmortem_templates_delete(cfg: &Config, template_id: &str) -> Res
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn postmortem_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
-    let path = format!("/api/v2/incidents/config/postmortem-templates/{template_id}");
-    crate::api::delete(cfg, &path).await?;
-    println!("Postmortem template {template_id} deleted.");
-    Ok(())
-}
-
 // ---- Import ----
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn import(cfg: &Config, file: &str) -> Result<()> {
     let body: IncidentImportRequest = util::read_json_file(file)?;
     let api = make_api(cfg);
@@ -372,11 +234,4 @@ pub async fn import(cfg: &Config, file: &str) -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("failed to import incident: {e:?}"))?;
     formatter::output(cfg, &resp)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn import(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::post(cfg, "/api/v2/incidents/import", &body).await?;
-    crate::formatter::output(cfg, &data)
 }

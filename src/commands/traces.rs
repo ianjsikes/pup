@@ -1,7 +1,5 @@
 use anyhow::{bail, Result};
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_spans::SpansAPI;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::model::{
     SpansAggregateData, SpansAggregateRequest, SpansAggregateRequestAttributes,
     SpansAggregateRequestType, SpansAggregationFunction, SpansCompute, SpansGroupBy,
@@ -9,7 +7,6 @@ use datadog_api_client::datadogV2::model::{
     SpansListRequestType, SpansQueryFilter, SpansSort,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
@@ -81,7 +78,6 @@ fn parse_compute_raw(input: &str) -> Result<(String, Option<String>)> {
 }
 
 /// Parse a compute string into (SpansAggregationFunction, Option<metric>).
-#[cfg(not(target_arch = "wasm32"))]
 fn parse_compute(input: &str) -> Result<(SpansAggregationFunction, Option<String>)> {
     let (func, metric) = parse_compute_raw(input)?;
     let agg = match func.as_str() {
@@ -102,7 +98,6 @@ fn parse_compute(input: &str) -> Result<(SpansAggregationFunction, Option<String
     Ok((agg, metric))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn search(
     cfg: &Config,
     query: String,
@@ -173,38 +168,6 @@ pub async fn search(
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn search(
-    cfg: &Config,
-    query: String,
-    from: String,
-    to: String,
-    limit: i32,
-    sort: String,
-) -> Result<()> {
-    validate_sort(&sort)?;
-
-    let from_ms = util::parse_time_to_unix_millis(&from)?;
-    let to_ms = util::parse_time_to_unix_millis(&to)?;
-    let body = serde_json::json!({
-        "data": {
-            "attributes": {
-                "filter": {
-                    "query": query,
-                    "from": from_ms.to_string(),
-                    "to": to_ms.to_string()
-                },
-                "page": { "limit": limit },
-                "sort": sort
-            },
-            "type": "search_request"
-        }
-    });
-    let data = crate::api::post(cfg, "/api/v2/spans/events/search", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn aggregate(
     cfg: &Config,
     query: String,
@@ -266,47 +229,6 @@ pub async fn aggregate(
     };
     formatter::format_and_print(&resp, &cfg.output_format, cfg.agent_mode, meta.as_ref())?;
     Ok(())
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn aggregate(
-    cfg: &Config,
-    query: String,
-    from: String,
-    to: String,
-    compute: String,
-    group_by: Option<String>,
-) -> Result<()> {
-    let (func, metric) = parse_compute_raw(&compute)?;
-
-    let from_ms = util::parse_time_to_unix_millis(&from)?;
-    let to_ms = util::parse_time_to_unix_millis(&to)?;
-
-    let mut compute_obj = serde_json::json!({ "aggregation": func });
-    if let Some(m) = metric {
-        compute_obj["metric"] = serde_json::Value::String(m);
-    }
-
-    let mut body = serde_json::json!({
-        "data": {
-            "attributes": {
-                "filter": {
-                    "query": query,
-                    "from": from_ms.to_string(),
-                    "to": to_ms.to_string()
-                },
-                "compute": [compute_obj]
-            },
-            "type": "aggregate_request"
-        }
-    });
-
-    if let Some(facet) = group_by {
-        body["data"]["attributes"]["group_by"] = serde_json::json!([{ "facet": facet }]);
-    }
-
-    let data = crate::api::post(cfg, "/api/v2/spans/analytics/aggregate", &body).await?;
-    crate::formatter::output(cfg, &data)
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

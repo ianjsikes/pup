@@ -1,4 +1,5 @@
-#[allow(dead_code)]
+// api.rs provides raw HTTP helpers used by test_commands.rs; not needed in production binary.
+#[cfg(test)]
 mod api;
 mod auth;
 mod client;

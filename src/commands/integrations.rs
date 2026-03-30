@@ -1,20 +1,13 @@
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
 use crate::util;
 use anyhow::Result;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::api_slack_integration::SlackIntegrationAPI;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::api_webhooks_integration::WebhooksIntegrationAPI;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_integrations::IntegrationsAPI;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_jira_integration::JiraIntegrationAPI;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::api_service_now_integration::ServiceNowIntegrationAPI;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV2::model::{
     JiraIssueTemplateCreateRequest, JiraIssueTemplateUpdateRequest,
     ServiceNowTemplateCreateRequest, ServiceNowTemplateUpdateRequest,
@@ -22,7 +15,6 @@ use datadog_api_client::datadogV2::model::{
 
 // ---- Jira ----
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn jira_accounts_list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -36,13 +28,6 @@ pub async fn jira_accounts_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn jira_accounts_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v2/integration/jira/accounts", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn jira_templates_list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -56,13 +41,6 @@ pub async fn jira_templates_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn jira_templates_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v2/integration/jira/issue_templates", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn jira_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -77,19 +55,6 @@ pub async fn jira_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn jira_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
-    util::parse_uuid(template_id, "template")?;
-    let data = crate::api::get(
-        cfg,
-        &format!("/api/v2/integration/jira/issue_templates/{template_id}"),
-        &[],
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn jira_accounts_delete(cfg: &Config, account_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -104,19 +69,6 @@ pub async fn jira_accounts_delete(cfg: &Config, account_id: &str) -> Result<()> 
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn jira_accounts_delete(cfg: &Config, account_id: &str) -> Result<()> {
-    util::parse_uuid(account_id, "account")?;
-    crate::api::delete(
-        cfg,
-        &format!("/api/v2/integration/jira/accounts/{account_id}"),
-    )
-    .await?;
-    println!("Jira account {account_id} deleted.");
-    Ok(())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn jira_templates_create(cfg: &Config, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -131,14 +83,6 @@ pub async fn jira_templates_create(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn jira_templates_create(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    let data = crate::api::post(cfg, "/api/v2/integration/jira/issue_templates", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn jira_templates_update(cfg: &Config, template_id: &str, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -154,20 +98,6 @@ pub async fn jira_templates_update(cfg: &Config, template_id: &str, file: &str) 
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn jira_templates_update(cfg: &Config, template_id: &str, file: &str) -> Result<()> {
-    util::parse_uuid(template_id, "template")?;
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    let data = crate::api::patch(
-        cfg,
-        &format!("/api/v2/integration/jira/issue_templates/{template_id}"),
-        &body,
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn jira_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -182,21 +112,8 @@ pub async fn jira_templates_delete(cfg: &Config, template_id: &str) -> Result<()
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn jira_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
-    util::parse_uuid(template_id, "template")?;
-    crate::api::delete(
-        cfg,
-        &format!("/api/v2/integration/jira/issue_templates/{template_id}"),
-    )
-    .await?;
-    println!("Jira template {template_id} deleted.");
-    Ok(())
-}
-
 // ---- ServiceNow ----
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn servicenow_instances_list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -210,13 +127,6 @@ pub async fn servicenow_instances_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn servicenow_instances_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v2/integration/servicenow/instances", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn servicenow_templates_list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -230,13 +140,6 @@ pub async fn servicenow_templates_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn servicenow_templates_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v2/integration/servicenow/templates", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn servicenow_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -251,19 +154,6 @@ pub async fn servicenow_templates_get(cfg: &Config, template_id: &str) -> Result
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn servicenow_templates_get(cfg: &Config, template_id: &str) -> Result<()> {
-    util::parse_uuid(template_id, "template")?;
-    let data = crate::api::get(
-        cfg,
-        &format!("/api/v2/integration/servicenow/templates/{template_id}"),
-        &[],
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn servicenow_templates_create(cfg: &Config, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -278,14 +168,6 @@ pub async fn servicenow_templates_create(cfg: &Config, file: &str) -> Result<()>
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn servicenow_templates_create(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    let data = crate::api::post(cfg, "/api/v2/integration/servicenow/templates", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn servicenow_templates_update(
     cfg: &Config,
     template_id: &str,
@@ -305,24 +187,6 @@ pub async fn servicenow_templates_update(
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn servicenow_templates_update(
-    cfg: &Config,
-    template_id: &str,
-    file: &str,
-) -> Result<()> {
-    util::parse_uuid(template_id, "template")?;
-    let body: serde_json::Value = crate::util::read_json_file(file)?;
-    let data = crate::api::patch(
-        cfg,
-        &format!("/api/v2/integration/servicenow/templates/{template_id}"),
-        &body,
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn servicenow_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -337,19 +201,6 @@ pub async fn servicenow_templates_delete(cfg: &Config, template_id: &str) -> Res
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn servicenow_templates_delete(cfg: &Config, template_id: &str) -> Result<()> {
-    util::parse_uuid(template_id, "template")?;
-    crate::api::delete(
-        cfg,
-        &format!("/api/v2/integration/servicenow/templates/{template_id}"),
-    )
-    .await?;
-    println!("ServiceNow template {template_id} deleted.");
-    Ok(())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn servicenow_users_list(cfg: &Config, instance_name: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -363,19 +214,6 @@ pub async fn servicenow_users_list(cfg: &Config, instance_name: &str) -> Result<
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn servicenow_users_list(cfg: &Config, instance_name: &str) -> Result<()> {
-    util::parse_uuid(instance_name, "instance")?;
-    let data = crate::api::get(
-        cfg,
-        &format!("/api/v2/integration/servicenow/instances/{instance_name}/users"),
-        &[],
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn servicenow_assignment_groups_list(cfg: &Config, instance_name: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -389,19 +227,6 @@ pub async fn servicenow_assignment_groups_list(cfg: &Config, instance_name: &str
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn servicenow_assignment_groups_list(cfg: &Config, instance_name: &str) -> Result<()> {
-    util::parse_uuid(instance_name, "instance")?;
-    let data = crate::api::get(
-        cfg,
-        &format!("/api/v2/integration/servicenow/instances/{instance_name}/assignment_groups"),
-        &[],
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn servicenow_business_services_list(cfg: &Config, instance_name: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -415,21 +240,8 @@ pub async fn servicenow_business_services_list(cfg: &Config, instance_name: &str
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn servicenow_business_services_list(cfg: &Config, instance_name: &str) -> Result<()> {
-    util::parse_uuid(instance_name, "instance")?;
-    let data = crate::api::get(
-        cfg,
-        &format!("/api/v2/integration/servicenow/instances/{instance_name}/business_services"),
-        &[],
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---- Slack ----
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn slack_list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -443,17 +255,6 @@ pub async fn slack_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn slack_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(
-        cfg,
-        "/api/v1/integration/slack/configuration/accounts/main/channels",
-        &[],
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---- PagerDuty ----
 
 pub async fn pagerduty_list(_cfg: &Config) -> Result<()> {
@@ -465,7 +266,6 @@ pub async fn pagerduty_list(_cfg: &Config) -> Result<()> {
 
 // ---- Webhooks ----
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn webhooks_list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -479,20 +279,8 @@ pub async fn webhooks_list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn webhooks_list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(
-        cfg,
-        "/api/v1/integration/webhooks/configuration/webhooks/main",
-        &[],
-    )
-    .await?;
-    crate::formatter::output(cfg, &data)
-}
-
 // ---- Integrations v2 list ----
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -504,10 +292,4 @@ pub async fn list(cfg: &Config) -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("failed to list integrations: {e:?}"))?;
     formatter::output(cfg, &resp)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v2/integrations", &[]).await?;
-    crate::formatter::output(cfg, &data)
 }

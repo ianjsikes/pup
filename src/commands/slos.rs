@@ -1,19 +1,15 @@
 use anyhow::Result;
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::api_service_level_objectives::{
     DeleteSLOOptionalParams, GetSLOOptionalParams, ListSLOsOptionalParams,
     ServiceLevelObjectivesAPI,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use datadog_api_client::datadogV1::model::{ServiceLevelObjective, ServiceLevelObjectiveRequest};
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::client;
 use crate::config::Config;
 use crate::formatter;
 use crate::util;
 
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -27,13 +23,6 @@ pub async fn list(cfg: &Config) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn list(cfg: &Config) -> Result<()> {
-    let data = crate::api::get(cfg, "/api/v1/slo", &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn get(cfg: &Config, id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -47,13 +36,6 @@ pub async fn get(cfg: &Config, id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn get(cfg: &Config, id: &str) -> Result<()> {
-    let data = crate::api::get(cfg, &format!("/api/v1/slo/{id}"), &[]).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn create(cfg: &Config, file: &str) -> Result<()> {
     let body: ServiceLevelObjectiveRequest = util::read_json_file(file)?;
     let dd_cfg = client::make_dd_config(cfg);
@@ -68,14 +50,6 @@ pub async fn create(cfg: &Config, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn create(cfg: &Config, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::post(cfg, "/api/v1/slo", &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn update(cfg: &Config, id: &str, file: &str) -> Result<()> {
     let body: ServiceLevelObjective = util::read_json_file(file)?;
     let dd_cfg = client::make_dd_config(cfg);
@@ -90,14 +64,6 @@ pub async fn update(cfg: &Config, id: &str, file: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn update(cfg: &Config, id: &str, file: &str) -> Result<()> {
-    let body: serde_json::Value = util::read_json_file(file)?;
-    let data = crate::api::put(cfg, &format!("/api/v1/slo/{id}"), &body).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn delete(cfg: &Config, id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
@@ -111,13 +77,6 @@ pub async fn delete(cfg: &Config, id: &str) -> Result<()> {
     formatter::output(cfg, &resp)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn delete(cfg: &Config, id: &str) -> Result<()> {
-    let data = crate::api::delete(cfg, &format!("/api/v1/slo/{id}")).await?;
-    crate::formatter::output(cfg, &data)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub async fn status(cfg: &Config, id: &str, from_ts: i64, to_ts: i64) -> Result<()> {
     use datadog_api_client::datadogV2::api_service_level_objectives::{
         GetSloStatusOptionalParams, ServiceLevelObjectivesAPI as SloV2API,
@@ -138,14 +97,4 @@ pub async fn status(cfg: &Config, id: &str, from_ts: i64, to_ts: i64) -> Result<
         .await
         .map_err(|e| anyhow::anyhow!("failed to get SLO status: {e:?}"))?;
     formatter::output(cfg, &resp)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub async fn status(cfg: &Config, id: &str, from_ts: i64, to_ts: i64) -> Result<()> {
-    let query = vec![
-        ("from_ts", from_ts.to_string()),
-        ("to_ts", to_ts.to_string()),
-    ];
-    let data = crate::api::get(cfg, &format!("/api/v2/slo/{id}/status"), &query).await?;
-    crate::formatter::output(cfg, &data)
 }
