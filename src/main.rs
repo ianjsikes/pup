@@ -897,6 +897,27 @@ enum Commands {
         #[command(subcommand)]
         action: EventActions,
     },
+    /// Manage pup extensions
+    ///
+    /// Install, list, remove, and upgrade pup extensions.
+    /// Extensions are external executables that add new subcommands to pup.
+    ///
+    /// COMMANDS:
+    ///   list      List installed extensions
+    ///   install   Install an extension from a local path or GitHub repo
+    ///   remove    Remove an installed extension
+    ///   upgrade   Upgrade an extension to the latest version
+    ///
+    /// EXAMPLES:
+    ///   pup extension list
+    ///   pup extension install --local /path/to/pup-my-tool
+    ///   pup extension remove my-tool
+    #[cfg(not(target_arch = "wasm32"))]
+    #[command(verbatim_doc_comment)]
+    Extension {
+        #[command(subcommand)]
+        action: ExtensionActions,
+    },
     /// Manage Fleet Automation
     ///
     /// Manage Fleet Automation for remote agent configuration and deployment.
@@ -2079,27 +2100,6 @@ enum Commands {
     Workflows {
         #[command(subcommand)]
         action: WorkflowActions,
-    },
-    /// Manage pup extensions
-    ///
-    /// Install, list, remove, and upgrade pup extensions.
-    /// Extensions are external executables that add new subcommands to pup.
-    ///
-    /// COMMANDS:
-    ///   list      List installed extensions
-    ///   install   Install an extension from a local path or GitHub repo
-    ///   remove    Remove an installed extension
-    ///   upgrade   Upgrade an extension to the latest version
-    ///
-    /// EXAMPLES:
-    ///   pup extension list
-    ///   pup extension install --local /path/to/pup-my-tool
-    ///   pup extension remove my-tool
-    #[cfg(not(target_arch = "wasm32"))]
-    #[command(verbatim_doc_comment)]
-    Extension {
-        #[command(subcommand)]
-        action: ExtensionActions,
     },
 }
 
@@ -6353,7 +6353,9 @@ mod test_agent_schema {
         path: &[&str],
     ) -> Option<&'a serde_json::Value> {
         let name = path[0];
-        let cmd = commands.iter().find(|c| c.get("name").and_then(|v| v.as_str()) == Some(name))?;
+        let cmd = commands
+            .iter()
+            .find(|c| c.get("name").and_then(|v| v.as_str()) == Some(name))?;
         if path.len() == 1 {
             Some(cmd)
         } else {
@@ -6387,15 +6389,34 @@ mod test_agent_schema {
         let commands = schema["commands"].as_array().unwrap();
         let cmd = find_command(commands, &["monitors", "get"]).expect("monitors get not found");
 
-        let args = cmd["args"].as_array().expect("monitors get should have args");
-        assert!(!args.is_empty(), "monitors get should have at least one positional arg");
+        let args = cmd["args"]
+            .as_array()
+            .expect("monitors get should have args");
+        assert!(
+            !args.is_empty(),
+            "monitors get should have at least one positional arg"
+        );
 
         let first = &args[0];
-        assert!(first.get("name").and_then(|v| v.as_str()).is_some(), "arg must have name");
-        assert_eq!(first["type"].as_str(), Some("string"), "positional args must be string type");
-        assert!(first["required"].is_boolean(), "arg must have required field");
+        assert!(
+            first.get("name").and_then(|v| v.as_str()).is_some(),
+            "arg must have name"
+        );
+        assert_eq!(
+            first["type"].as_str(),
+            Some("string"),
+            "positional args must be string type"
+        );
+        assert!(
+            first["required"].is_boolean(),
+            "arg must have required field"
+        );
         assert!(first["index"].is_u64(), "arg must have numeric index");
-        assert_eq!(first["index"].as_u64(), Some(1), "first arg should have index 1");
+        assert_eq!(
+            first["index"].as_u64(),
+            Some(1),
+            "first arg should have index 1"
+        );
     }
 
     #[test]
@@ -6404,13 +6425,21 @@ mod test_agent_schema {
         let commands = schema["commands"].as_array().unwrap();
         let cmd = find_command(commands, &["logs", "search"]).expect("logs search not found");
 
-        let flags = cmd["flags"].as_array().expect("logs search should have flags");
+        let flags = cmd["flags"]
+            .as_array()
+            .expect("logs search should have flags");
         assert!(!flags.is_empty());
 
         for flag in flags {
             let name = flag["name"].as_str().unwrap_or("<unknown>");
-            assert!(flag["required"].is_boolean(), "flag {name} must have required field");
-            assert!(flag["type"].as_str().is_some(), "flag {name} must have type");
+            assert!(
+                flag["required"].is_boolean(),
+                "flag {name} must have required field"
+            );
+            assert!(
+                flag["type"].as_str().is_some(),
+                "flag {name} must have type"
+            );
         }
     }
 
@@ -6427,7 +6456,10 @@ mod test_agent_schema {
             .expect("logs search should have --query flag");
 
         assert_eq!(query_flag["type"].as_str(), Some("string"));
-        assert!(query_flag.get("description").and_then(|v| v.as_str()).is_some());
+        assert!(query_flag
+            .get("description")
+            .and_then(|v| v.as_str())
+            .is_some());
     }
 
     #[test]
@@ -6437,7 +6469,10 @@ mod test_agent_schema {
         let cmd = find_command(commands, &["alias", "set"]).expect("alias set not found");
 
         let args = cmd["args"].as_array().expect("alias set should have args");
-        assert!(args.len() >= 2, "alias set should have at least 2 positional args");
+        assert!(
+            args.len() >= 2,
+            "alias set should have at least 2 positional args"
+        );
 
         let indices: Vec<u64> = args.iter().filter_map(|a| a["index"].as_u64()).collect();
         let mut sorted = indices.clone();
@@ -6456,7 +6491,10 @@ mod test_agent_schema {
             .expect("monitors not found");
 
         assert!(
-            monitors.get("subcommands").and_then(|v| v.as_array()).is_some(),
+            monitors
+                .get("subcommands")
+                .and_then(|v| v.as_array())
+                .is_some(),
             "group command should have subcommands"
         );
     }
