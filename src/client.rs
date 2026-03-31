@@ -504,6 +504,89 @@ static OAUTH_EXCLUDED_ENDPOINTS: &[EndpointRequirement] = &[
 // Raw HTTP helpers
 // ---------------------------------------------------------------------------
 
+/// Raw HTTP response returned by [`raw_request`].
+pub struct HttpResponse {
+    /// The `Content-Type` header value from the response, or an empty string if absent.
+    pub content_type: String,
+    /// The raw response body bytes.
+    pub bytes: Vec<u8>,
+}
+
+/// Makes an authenticated request with any HTTP method via reqwest.
+///
+/// - `body` — raw bytes to send; `content_type` sets the `Content-Type` header when present.
+/// - `accept` — value for the `Accept` header (e.g. `"application/json"`, `"*/*"`).
+/// - `extra_headers` — additional headers applied after auth and before the body.
+/// - Returns an [`HttpResponse`] with the raw bytes and response `Content-Type`.
+///   Callers are responsible for decoding the bytes.
+pub async fn raw_request(
+    cfg: &Config,
+    method: &str,
+    path: &str,
+    body: Option<Vec<u8>>,
+    content_type: Option<&str>,
+    accept: &str,
+    extra_headers: &[(&str, &str)],
+) -> anyhow::Result<HttpResponse> {
+    let url = format!("{}{}", cfg.api_base_url(), path);
+    let client = reqwest::Client::new();
+    let method = reqwest::Method::from_bytes(method.to_uppercase().as_bytes())
+        .map_err(|_| anyhow::anyhow!("unsupported HTTP method: {method}"))?;
+    let mut req = client.request(method, &url);
+
+    if let Some(token) = &cfg.access_token {
+        req = req.header("Authorization", format!("Bearer {token}"));
+    } else if let (Some(api_key), Some(app_key)) = (&cfg.api_key, &cfg.app_key) {
+        req = req
+            .header("DD-API-KEY", api_key.as_str())
+            .header("DD-APPLICATION-KEY", app_key.as_str());
+    } else {
+        anyhow::bail!("no authentication configured");
+    }
+
+    req = req
+        .header("Accept", accept)
+        .header("User-Agent", useragent::get());
+
+    for (k, v) in extra_headers {
+        req = req.header(*k, *v);
+    }
+
+    if let Some(b) = body {
+        if let Some(ct) = content_type {
+            req = req.header("Content-Type", ct);
+        }
+        req = req.body(b);
+    }
+
+    let resp = req.send().await?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        anyhow::bail!("API error (HTTP {status}): {text}");
+    }
+
+    let resp_ct = resp
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+
+    if resp.status() == reqwest::StatusCode::NO_CONTENT {
+        return Ok(HttpResponse {
+            content_type: resp_ct,
+            bytes: vec![],
+        });
+    }
+
+    let bytes = resp.bytes().await?.to_vec();
+    Ok(HttpResponse {
+        content_type: resp_ct,
+        bytes,
+    })
+}
+
 /// Makes an authenticated GET request directly via reqwest.
 /// Used for endpoints not covered by the typed DD API client.
 /// Pass an empty slice for `query` when no query parameters are needed.

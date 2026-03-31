@@ -44,6 +44,8 @@ pub mod organizations;
 pub mod product_analytics;
 pub mod reference_tables;
 pub mod rum;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod runbooks;
 pub mod scorecards;
 pub mod seats;
 pub mod security;

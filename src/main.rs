@@ -6,6 +6,8 @@ mod client;
 mod commands;
 mod config;
 mod formatter;
+#[cfg(not(target_arch = "wasm32"))]
+mod runbooks;
 mod skills;
 #[cfg(not(target_arch = "wasm32"))]
 mod tunnel;
@@ -1961,6 +1963,40 @@ enum Commands {
     Users {
         #[command(subcommand)]
         action: UserActions,
+    },
+    #[cfg(not(target_arch = "wasm32"))]
+    /// Execute and manage local operational runbooks
+    ///
+    /// Runbooks are YAML files stored in ~/.config/pup/runbooks/ that define
+    /// sequential operational steps mixing pup commands, shell tools, Datadog
+    /// Workflows, and human confirmation gates.
+    ///
+    /// COMMANDS:
+    ///   list        List available runbooks (optionally filtered by tags)
+    ///   describe    Show runbook details and steps
+    ///   run         Execute a runbook with optional variable overrides
+    ///   validate    Validate runbook structure without executing
+    ///   import      Import a runbook from a file path or URL
+    ///
+    /// EXAMPLES:
+    ///   # List all runbooks
+    ///   pup runbooks list
+    ///
+    ///   # List runbooks tagged type:deployment
+    ///   pup runbooks list --tag=type:deployment
+    ///
+    ///   # Run a runbook with variable overrides
+    ///   pup runbooks run deploy-service --arg SERVICE=payments --arg VERSION=1.2.3
+    ///
+    ///   # Validate without executing
+    ///   pup runbooks validate deploy-service
+    ///
+    ///   # Import from a file or URL
+    ///   pup runbooks import ./my-runbook.yaml
+    #[command(verbatim_doc_comment)]
+    Runbooks {
+        #[command(subcommand)]
+        action: RunbookActions,
     },
     /// Manage Datadog workflows
     ///
@@ -5448,6 +5484,29 @@ enum AgentActions {
     Guide,
 }
 
+// ---- Runbooks ----
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Subcommand)]
+enum RunbookActions {
+    /// List available runbooks
+    List {
+        #[arg(long, help = "Filter by tag (key:value, repeatable)", action = clap::ArgAction::Append)]
+        tag: Vec<String>,
+    },
+    /// Show runbook details and steps
+    Describe { name: String },
+    /// Execute a runbook
+    Run {
+        name: String,
+        #[arg(long, help = "Set a variable: KEY=VALUE", action = clap::ArgAction::Append)]
+        arg: Vec<String>,
+    },
+    /// Validate a runbook without executing
+    Validate { name: String },
+    /// Import a runbook from a file path or URL
+    Import { source: String },
+}
+
 // ---- Alias ----
 #[derive(Subcommand)]
 enum AliasActions {
@@ -8285,6 +8344,25 @@ async fn main_inner() -> anyhow::Result<()> {
                 },
             }
         }
+        // --- Runbooks ---
+        #[cfg(not(target_arch = "wasm32"))]
+        Commands::Runbooks { action } => match action {
+            RunbookActions::List { tag } => {
+                commands::runbooks::list(&cfg, tag)?;
+            }
+            RunbookActions::Describe { name } => {
+                commands::runbooks::describe(&cfg, &name)?;
+            }
+            RunbookActions::Run { name, arg } => {
+                commands::runbooks::run(&cfg, &name, arg, cfg.auto_approve).await?;
+            }
+            RunbookActions::Validate { name } => {
+                commands::runbooks::validate(&cfg, &name)?;
+            }
+            RunbookActions::Import { source } => {
+                commands::runbooks::import(&cfg, &source).await?;
+            }
+        },
         // --- Auth ---
         Commands::Auth { action } => match action {
             AuthActions::Login {
