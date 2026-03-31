@@ -792,6 +792,26 @@ enum Commands {
         #[command(subcommand)]
         action: DataGovActions,
     },
+    /// Query Datadog data using DDSQL (Datadog SQL)
+    ///
+    /// DDSQL lets you query metrics, logs, and reference tables using SQL syntax.
+    ///
+    /// COMMANDS:
+    ///   table        Execute query and return table data (supports -o json/yaml/table/csv)
+    ///   time-series  Execute query and return time series data
+    ///
+    /// EXAMPLES:
+    ///   pup ddsql table --query "SELECT * FROM reference_tables.offices_ips LIMIT 5"
+    ///   pup ddsql table --query "SELECT * FROM reference_tables.offices_ips" -o csv > results.csv
+    ///   pup ddsql time-series --query "SELECT avg(system.cpu.user) FROM metrics GROUP BY host" --from 1h --interval 300000
+    ///
+    /// AUTHENTICATION:
+    ///   Requires OAuth2 (via 'pup auth login') or API key + Application key.
+    #[command(verbatim_doc_comment)]
+    Ddsql {
+        #[command(subcommand)]
+        action: DdsqlActions,
+    },
     /// Manage Deployment Gates
     ///
     /// Deployment Gates reduce the likelihood and impact of incidents caused by deployments.
@@ -823,26 +843,6 @@ enum Commands {
     DeploymentGates {
         #[command(subcommand)]
         action: DeploymentGatesActions,
-    },
-    /// Query Datadog data using DDSQL (Datadog SQL)
-    ///
-    /// DDSQL lets you query metrics, logs, and reference tables using SQL syntax.
-    ///
-    /// COMMANDS:
-    ///   table        Execute query and return table data (supports -o json/yaml/table/csv)
-    ///   time-series  Execute query and return time series data
-    ///
-    /// EXAMPLES:
-    ///   pup ddsql table --query "SELECT * FROM reference_tables.offices_ips LIMIT 5"
-    ///   pup ddsql table --query "SELECT * FROM reference_tables.offices_ips" -o csv > results.csv
-    ///   pup ddsql time-series --query "SELECT avg(system.cpu.user) FROM metrics GROUP BY host" --from 1h --interval 300000
-    ///
-    /// AUTHENTICATION:
-    ///   Requires OAuth2 (via 'pup auth login') or API key + Application key.
-    #[command(verbatim_doc_comment)]
-    Ddsql {
-        #[command(subcommand)]
-        action: DdsqlActions,
     },
     /// Manage monitor downtimes
     ///
@@ -950,44 +950,6 @@ enum Commands {
         #[command(subcommand)]
         action: ExtensionActions,
     },
-    /// Manage Fleet Automation
-    ///
-    /// Manage Fleet Automation for remote agent configuration and deployment.
-    ///
-    /// Fleet Automation provides centralized management of Datadog Agents across
-    /// your infrastructure, enabling remote configuration changes, scheduled
-    /// deployments, and agent lifecycle management.
-    ///
-    /// CAPABILITIES:
-    ///   • List and inspect fleet agents
-    ///   • Manage deployment configurations
-    ///   • Schedule configuration changes
-    ///   • Monitor agent health and status
-    ///
-    /// EXAMPLES:
-    ///   # List fleet agents
-    ///   pup fleet agents list
-    ///
-    ///   # Get agent details
-    ///   pup fleet agents get <agent-key>
-    ///
-    ///   # List deployments
-    ///   pup fleet deployments list
-    ///
-    ///   # Deploy a configuration change
-    ///   pup fleet deployments configure --file=config.json
-    ///
-    ///   # List schedules
-    ///   pup fleet schedules list
-    ///
-    /// AUTHENTICATION:
-    ///   Requires either OAuth2 authentication (pup auth login) or API keys
-    ///   (DD_API_KEY and DD_APP_KEY environment variables).
-    #[command(verbatim_doc_comment)]
-    Fleet {
-        #[command(subcommand)]
-        action: FleetActions,
-    },
     /// Manage feature flags
     ///
     /// Manage Datadog feature flags and their environments.
@@ -1036,6 +998,44 @@ enum Commands {
     FeatureFlags {
         #[command(subcommand)]
         action: FeatureFlagActions,
+    },
+    /// Manage Fleet Automation
+    ///
+    /// Manage Fleet Automation for remote agent configuration and deployment.
+    ///
+    /// Fleet Automation provides centralized management of Datadog Agents across
+    /// your infrastructure, enabling remote configuration changes, scheduled
+    /// deployments, and agent lifecycle management.
+    ///
+    /// CAPABILITIES:
+    ///   • List and inspect fleet agents
+    ///   • Manage deployment configurations
+    ///   • Schedule configuration changes
+    ///   • Monitor agent health and status
+    ///
+    /// EXAMPLES:
+    ///   # List fleet agents
+    ///   pup fleet agents list
+    ///
+    ///   # Get agent details
+    ///   pup fleet agents get <agent-key>
+    ///
+    ///   # List deployments
+    ///   pup fleet deployments list
+    ///
+    ///   # Deploy a configuration change
+    ///   pup fleet deployments configure --file=config.json
+    ///
+    ///   # List schedules
+    ///   pup fleet schedules list
+    ///
+    /// AUTHENTICATION:
+    ///   Requires either OAuth2 authentication (pup auth login) or API keys
+    ///   (DD_API_KEY and DD_APP_KEY environment variables).
+    #[command(verbatim_doc_comment)]
+    Fleet {
+        #[command(subcommand)]
+        action: FleetActions,
     },
     /// Manage High Availability Multi-Region (HAMR)
     ///
@@ -2034,30 +2034,6 @@ enum Commands {
         #[command(subcommand)]
         action: SyntheticsActions,
     },
-    /// Manage Test Optimization settings and flaky tests
-    ///
-    /// Configure Test Optimization service settings and manage flaky tests
-    /// through the Datadog Test Optimization API.
-    ///
-    /// CAPABILITIES:
-    ///   • Get, update, or delete service-level Test Optimization settings
-    ///   • Search for flaky tests across your test suites
-    ///   • Update flaky test state (e.g. mark as known flaky)
-    ///
-    /// EXAMPLES:
-    ///   # Get service settings
-    ///   pup test-optimization settings get --file=body.json
-    ///
-    ///   # Search for flaky tests
-    ///   pup test-optimization flaky-tests search
-    ///
-    /// AUTHENTICATION:
-    ///   Requires either OAuth2 authentication or API keys.
-    #[command(name = "test-optimization", verbatim_doc_comment)]
-    TestOptimization {
-        #[command(subcommand)]
-        action: TestOptimizationActions,
-    },
     /// Manage host tags
     ///
     /// Manage tags for hosts in your infrastructure.
@@ -2088,6 +2064,30 @@ enum Commands {
     Tags {
         #[command(subcommand)]
         action: TagActions,
+    },
+    /// Manage Test Optimization settings and flaky tests
+    ///
+    /// Configure Test Optimization service settings and manage flaky tests
+    /// through the Datadog Test Optimization API.
+    ///
+    /// CAPABILITIES:
+    ///   • Get, update, or delete service-level Test Optimization settings
+    ///   • Search for flaky tests across your test suites
+    ///   • Update flaky test state (e.g. mark as known flaky)
+    ///
+    /// EXAMPLES:
+    ///   # Get service settings
+    ///   pup test-optimization settings get --file=body.json
+    ///
+    ///   # Search for flaky tests
+    ///   pup test-optimization flaky-tests search
+    ///
+    /// AUTHENTICATION:
+    ///   Requires either OAuth2 authentication or API keys.
+    #[command(name = "test-optimization", verbatim_doc_comment)]
+    TestOptimization {
+        #[command(subcommand)]
+        action: TestOptimizationActions,
     },
     /// Search and aggregate APM traces
     ///
