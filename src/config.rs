@@ -87,9 +87,17 @@ impl Config {
         let file_cfg = load_config_file().unwrap_or_default();
 
         let access_token = env_or("DD_ACCESS_TOKEN", file_cfg.access_token);
-        let site = normalize_site(
-            &env_or("DD_SITE", file_cfg.site).unwrap_or_else(|| "datadoghq.com".into()),
-        );
+        let raw_site = env_or("DD_SITE", file_cfg.site).unwrap_or_else(|| "datadoghq.com".into());
+        if is_custom_subdomain(&raw_site) {
+            eprintln!(
+                "Warning: DD_SITE '{}' contains a custom subdomain. Assuming US1 region \
+                 (datadoghq.com). If you meant a standard region, use one of: \
+                 datadoghq.com (US1), us3.datadoghq.com (US3), us5.datadoghq.com (US5), \
+                 ap1.datadoghq.com (AP1), datadoghq.eu (EU), ddog-gov.com (US1-FED).",
+                raw_site
+            );
+        }
+        let site = normalize_site(&raw_site);
         let org = env_or("DD_ORG", file_cfg.org); // flag override applied in main_inner
 
         // If no token from env/file, try loading from keychain/storage (where `pup auth login` saves)
@@ -398,6 +406,36 @@ pub fn normalize_site(site: &str) -> String {
     parts[keep_from..].join(".")
 }
 
+/// Returns true when `site` contains a custom subdomain that will be stripped by
+/// `normalize_site`, and that subdomain is not a known harmless UI prefix (`app`, `www`)
+/// or a recognized regional prefix (`us3`, `ap1`, etc.).
+///
+/// This is used to warn users who may have set `DD_SITE` to a dedicated/custom Datadog
+/// instance URL — which requires the full host, not the stripped base domain.
+pub fn is_custom_subdomain(site: &str) -> bool {
+    if site.contains("oncall") {
+        return false; // oncall sites are passed through unchanged
+    }
+    let parts: Vec<&str> = site.split('.').collect();
+    let n = parts.len();
+    if n < 3 {
+        return false; // no subdomain prefix to strip
+    }
+    let keep_from = if n >= 3 && is_region_prefix(parts[n - 3]) {
+        n - 3
+    } else {
+        n - 2
+    };
+    if keep_from == 0 {
+        return false; // nothing would be stripped
+    }
+    // Any stripped label that isn't a known UI prefix is a custom subdomain
+    const SAFE_PREFIXES: &[&str] = &["api", "app", "www"];
+    parts[..keep_from]
+        .iter()
+        .any(|p| !SAFE_PREFIXES.contains(p))
+}
+
 /// Returns true if `s` matches the pattern `[a-z]{2}[0-9]+` (e.g. "us3", "eu1", "ap1").
 fn is_region_prefix(s: &str) -> bool {
     let b = s.as_bytes();
@@ -626,6 +664,45 @@ mod tests {
             normalize_site("navy.oncall.datadoghq.com"),
             "navy.oncall.datadoghq.com"
         );
+    }
+
+    // --- is_custom_subdomain tests ---
+
+    #[test]
+    fn test_is_custom_subdomain_plain() {
+        assert!(!is_custom_subdomain("datadoghq.com"));
+    }
+
+    #[test]
+    fn test_is_custom_subdomain_app_prefix() {
+        assert!(!is_custom_subdomain("app.datadoghq.com"));
+    }
+
+    #[test]
+    fn test_is_custom_subdomain_region_prefix() {
+        assert!(!is_custom_subdomain("us3.datadoghq.com"));
+        assert!(!is_custom_subdomain("ap1.datadoghq.com"));
+        assert!(!is_custom_subdomain("eu1.datadoghq.com"));
+    }
+
+    #[test]
+    fn test_is_custom_subdomain_app_and_region_prefix() {
+        assert!(!is_custom_subdomain("app.us3.datadoghq.com"));
+    }
+
+    #[test]
+    fn test_is_custom_subdomain_oncall() {
+        assert!(!is_custom_subdomain("navy.oncall.datadoghq.com"));
+    }
+
+    #[test]
+    fn test_is_custom_subdomain_custom() {
+        assert!(is_custom_subdomain("customname.datadoghq.com"));
+    }
+
+    #[test]
+    fn test_is_custom_subdomain_app_then_custom() {
+        assert!(is_custom_subdomain("app.customname.datadoghq.com"));
     }
 
     // --- api_host tests (site already normalized at construction) ---
