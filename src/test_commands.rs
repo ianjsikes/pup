@@ -3111,12 +3111,8 @@ async fn test_llm_obs_spans_search_from_is_numeric_string() {
         .with_header("content-type", "application/json")
         .with_body(resp)
         // Assert both from and to are 13-digit epoch ms strings, not relative strings
-        .match_body(mockito::Matcher::Regex(
-            r#""from":"\d{13}""#.to_string(),
-        ))
-        .match_body(mockito::Matcher::Regex(
-            r#""to":"\d{13}""#.to_string(),
-        ))
+        .match_body(mockito::Matcher::Regex(r#""from":"\d{13}""#.to_string()))
+        .match_body(mockito::Matcher::Regex(r#""to":"\d{13}""#.to_string()))
         .create_async()
         .await;
 
