@@ -78,9 +78,11 @@ pub struct ProbeCreateParams<'a> {
     pub template: Option<&'a str>,
     pub condition: Option<&'a str>,
     pub snapshot: bool,
+    pub capture_expressions: Vec<&'a str>,
     pub rate: u32,
     pub budget: u32,
     pub ttl: Option<&'a str>,
+    pub depth: u32,
 }
 
 struct ResolvedProbe<'a> {
@@ -93,9 +95,11 @@ struct ResolvedProbe<'a> {
     segments: serde_json::Value,
     when: Option<serde_json::Value>,
     snapshot: bool,
+    capture_expressions: Vec<serde_json::Value>,
     rate: u32,
     budget: u32,
     expires_ms: Option<i64>,
+    depth: u32,
 }
 
 fn default_template(type_name: &str, method_name: &str) -> (String, serde_json::Value) {
@@ -108,9 +112,98 @@ fn default_template(type_name: &str, method_name: &str) -> (String, serde_json::
     (tmpl, segs)
 }
 
+fn capture_expr_name(dsl: &str) -> String {
+    dsl.replace('.', "_")
+}
+
+#[cfg(feature = "native")]
+async fn parse_capture_expressions(
+    cfg: &Config,
+    expressions: &[&str],
+    depth: u32,
+) -> Result<Vec<serde_json::Value>> {
+    let sem = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
+    let futs: Vec<_> = expressions
+        .iter()
+        .map(|expr| {
+            let expr = expr.to_string();
+            let sem = sem.clone();
+            async move {
+                let _permit = sem.acquire().await;
+                let body = serde_json::json!({
+                    "data": {
+                        "type": "parse-template",
+                        "attributes": {
+                            "template": format!("{{{expr}}}")
+                        }
+                    }
+                });
+                let resp = post_lenient(cfg, "/api/ui/debugger/parse-template", body).await?;
+                if let Some(msg) = extract_api_errors(&resp) {
+                    anyhow::bail!("invalid capture expression '{expr}': {msg}");
+                }
+                let seg = &resp["data"]["attributes"]["segments"][0];
+                let dsl = seg["dsl"].clone();
+                let json_val = seg["json"].clone();
+                if dsl.is_null() || json_val.is_null() {
+                    anyhow::bail!(
+                        "failed to parse capture expression '{expr}': no dsl/json in response"
+                    );
+                }
+                Ok(serde_json::json!({
+                    "name": capture_expr_name(&expr),
+                    "expr": { "dsl": dsl, "json": json_val },
+                    "capture": { "max_reference_depth": depth }
+                }))
+            }
+        })
+        .collect();
+    futures::future::join_all(futs)
+        .await
+        .into_iter()
+        .collect()
+}
+
+#[cfg(not(feature = "native"))]
+async fn parse_capture_expressions(
+    cfg: &Config,
+    expressions: &[&str],
+    depth: u32,
+) -> Result<Vec<serde_json::Value>> {
+    let mut results = Vec::with_capacity(expressions.len());
+    for expr in expressions {
+        let body = serde_json::json!({
+            "data": {
+                "type": "parse-template",
+                "attributes": {
+                    "template": format!("{{{expr}}}")
+                }
+            }
+        });
+        let resp = post_lenient(cfg, "/api/ui/debugger/parse-template", body).await?;
+        if let Some(msg) = extract_api_errors(&resp) {
+            anyhow::bail!("invalid capture expression '{expr}': {msg}");
+        }
+        let seg = &resp["data"]["attributes"]["segments"][0];
+        let dsl = seg["dsl"].clone();
+        let json_val = seg["json"].clone();
+        if dsl.is_null() || json_val.is_null() {
+            anyhow::bail!(
+                "failed to parse capture expression '{expr}': no dsl/json in response"
+            );
+        }
+        results.push(serde_json::json!({
+            "name": capture_expr_name(expr),
+            "expr": { "dsl": dsl, "json": json_val },
+            "capture": { "max_reference_depth": depth }
+        }));
+    }
+    Ok(results)
+}
+
 fn build_probe_payload(p: &ResolvedProbe<'_>) -> serde_json::Value {
     let mut probe = serde_json::json!({
-        "capture": { "max_reference_depth": 3 },
+        "capture": { "max_reference_depth": p.depth },
         "capture_snapshot": p.snapshot,
         "template": p.template_str,
         "segments": p.segments,
@@ -127,6 +220,10 @@ fn build_probe_payload(p: &ResolvedProbe<'_>) -> serde_json::Value {
 
     if let Some(w) = &p.when {
         probe["when"] = w.clone();
+    }
+
+    if !p.capture_expressions.is_empty() {
+        probe["capture_expressions"] = serde_json::Value::Array(p.capture_expressions.clone());
     }
 
     let mut payload = serde_json::json!({
@@ -180,9 +277,11 @@ pub async fn probes_create(cfg: &Config, params: ProbeCreateParams<'_>) -> Resul
         template,
         condition,
         snapshot,
+        capture_expressions,
         rate,
         budget,
         ttl,
+        depth,
     } = params;
     let expires_ms = if let Some(ttl_str) = ttl {
         Some(crate::util::now_millis() + crate::util::parse_duration_to_millis(ttl_str)?)
@@ -216,6 +315,9 @@ pub async fn probes_create(cfg: &Config, params: ProbeCreateParams<'_>) -> Resul
         None
     };
 
+    // Parse capture expressions via parse-template (wrap as "{expr}" template)
+    let parsed_captures = parse_capture_expressions(cfg, &capture_expressions, depth).await?;
+
     // Build segments and template string
     let (template_str, segments) = if let Some(tmpl) = template {
         let body = serde_json::json!({
@@ -246,9 +348,11 @@ pub async fn probes_create(cfg: &Config, params: ProbeCreateParams<'_>) -> Resul
         segments,
         when,
         snapshot,
+        capture_expressions: parsed_captures,
         rate,
         budget,
         expires_ms,
+        depth,
     });
 
     let resp = post(cfg, PROBES_PATH, payload).await?;
@@ -545,9 +649,11 @@ mod tests {
             segments,
             when: None,
             snapshot: true,
+            capture_expressions: vec![],
             rate: 1,
             budget: 500,
             expires_ms: None,
+            depth: 3,
         };
         overrides(&mut rp);
         build_probe_payload(&rp)
@@ -674,6 +780,73 @@ mod tests {
     fn test_extract_api_errors_no_errors_field() {
         let resp = serde_json::json!({ "data": {} });
         assert!(extract_api_errors(&resp).is_none());
+    }
+
+    #[test]
+    fn test_capture_expr_name_simple_ref() {
+        assert_eq!(capture_expr_name("userId"), "userId");
+    }
+
+    #[test]
+    fn test_capture_expr_name_dotted() {
+        assert_eq!(
+            capture_expr_name("vets.vets[1].firstName"),
+            "vets_vets[1]_firstName"
+        );
+    }
+
+    #[test]
+    fn test_capture_expr_name_nested() {
+        assert_eq!(
+            capture_expr_name("deepObjs[len(garbage)].next.next"),
+            "deepObjs[len(garbage)]_next_next"
+        );
+    }
+
+    #[test]
+    fn test_build_probe_payload_capture_expressions() {
+        let captures = vec![serde_json::json!({
+            "name": "user_name",
+            "expr": {
+                "dsl": "user.name",
+                "json": {
+                    "getmember": [{"ref": "user"}, "name"]
+                }
+            },
+            "capture": {
+                "max_reference_depth": 3,
+            }
+        })];
+        let payload = test_resolved_probe(|rp| {
+            rp.snapshot = false;
+            rp.capture_expressions = captures;
+        });
+        let probe = &payload["data"]["attributes"]["probe"];
+        assert_eq!(probe["capture_snapshot"], false);
+        assert_eq!(probe["capture_expressions"][0]["name"], "user_name");
+        assert_eq!(probe["capture_expressions"][0]["expr"]["dsl"], "user.name");
+        assert_eq!(
+            probe["capture_expressions"][0]["capture"]["max_reference_depth"],
+            3
+        );
+    }
+
+    #[test]
+    fn test_build_probe_payload_no_capture_expressions() {
+        let payload = test_resolved_probe(|rp| {
+            rp.snapshot = false;
+        });
+        let probe = &payload["data"]["attributes"]["probe"];
+        assert!(probe.get("capture_expressions").is_none());
+    }
+
+    #[test]
+    fn test_build_probe_payload_custom_depth() {
+        let payload = test_resolved_probe(|rp| {
+            rp.depth = 5;
+        });
+        let probe = &payload["data"]["attributes"]["probe"];
+        assert_eq!(probe["capture"]["max_reference_depth"], 5);
     }
 
     fn sample_context_response() -> serde_json::Value {

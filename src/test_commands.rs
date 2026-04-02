@@ -3337,9 +3337,11 @@ async fn test_debugger_probes_create() {
         template: None,
         condition: None,
         snapshot: true,
+        capture_expressions: vec![],
         rate: 1,
         budget: 1000,
         ttl: Some("1h"),
+        depth: 3,
     };
     let _ = crate::commands::debugger::probes_create(&cfg, params).await;
     cleanup_env();
