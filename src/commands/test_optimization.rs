@@ -63,11 +63,23 @@ pub async fn flaky_tests_search(cfg: &Config, file: Option<String>) -> Result<()
         Some(c) => TestOptimizationAPI::with_client_and_config(dd_cfg, c),
         None => TestOptimizationAPI::with_config(dd_cfg),
     };
-    let mut params = SearchFlakyTestsOptionalParams::default();
-    if let Some(f) = file {
+    let params = if let Some(f) = file {
         let body = crate::util::read_json_file(&f)?;
-        params = params.body(body);
-    }
+        SearchFlakyTestsOptionalParams::default().body(body)
+    } else {
+        use datadog_api_client::datadogV2::model::{
+            FlakyTestsSearchPageOptions, FlakyTestsSearchRequest,
+            FlakyTestsSearchRequestAttributes, FlakyTestsSearchRequestData,
+            FlakyTestsSearchRequestDataType,
+        };
+        let page_opts = FlakyTestsSearchPageOptions::new().limit(100);
+        let attrs = FlakyTestsSearchRequestAttributes::new().page(page_opts);
+        let data = FlakyTestsSearchRequestData::new()
+            .attributes(attrs)
+            .type_(FlakyTestsSearchRequestDataType::SEARCH_FLAKY_TESTS_REQUEST);
+        let body = FlakyTestsSearchRequest::new().data(data);
+        SearchFlakyTestsOptionalParams::default().body(body)
+    };
     let resp = api
         .search_flaky_tests(params)
         .await

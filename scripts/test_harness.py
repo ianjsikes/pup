@@ -1314,6 +1314,13 @@ READ_COMMANDS: list[dict] = [
         "category": "auth_required",
         "expect_json": True,
     },
+    # ── test-optimization ────────────────────────────────────────────────
+    {
+        "label": "test-optimization flaky-tests search",
+        "args": ["test-optimization", "flaky-tests", "search"],
+        "category": "auth_required",
+        "expect_json": True,
+    },
     # ── traces ────────────────────────────────────────────────────────────
     {
         "label": "traces search",
