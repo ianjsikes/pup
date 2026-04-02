@@ -120,7 +120,8 @@ pub async fn run(
 
     eprintln!("Instance {instance_id} started, waiting for completion...");
 
-    let timeout_duration = parse_duration(timeout)?;
+    let timeout_duration =
+        std::time::Duration::from_millis(crate::util::parse_duration_to_millis(timeout)? as u64);
     let start = std::time::Instant::now();
 
     loop {
@@ -207,85 +208,4 @@ pub async fn instance_cancel(cfg: &Config, workflow_id: &str, instance_id: &str)
         .await
         .map_err(|e| anyhow::anyhow!("failed to cancel workflow instance: {:?}", e))?;
     formatter::output(cfg, &resp)
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-fn parse_duration(input: &str) -> Result<std::time::Duration> {
-    use std::sync::LazyLock;
-    static RE: LazyLock<regex::Regex> =
-        LazyLock::new(|| regex::Regex::new(r"(?i)^(\d+)\s*(s|m|h)$").unwrap());
-
-    let input = input.trim();
-    if let Some(caps) = RE.captures(input) {
-        let num: u64 = caps[1].parse()?;
-        let secs = match caps[2].to_lowercase().as_str() {
-            "s" => num,
-            "m" => num * 60,
-            "h" => num * 3600,
-            _ => return Err(anyhow::anyhow!("unknown duration unit")),
-        };
-        Ok(std::time::Duration::from_secs(secs))
-    } else {
-        Err(anyhow::anyhow!(
-            "invalid duration: {input:?} (expected e.g. 30s, 5m, 1h)"
-        ))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse_duration_seconds() {
-        let d = parse_duration("30s").unwrap();
-        assert_eq!(d, std::time::Duration::from_secs(30));
-    }
-
-    #[test]
-    fn test_parse_duration_minutes() {
-        let d = parse_duration("5m").unwrap();
-        assert_eq!(d, std::time::Duration::from_secs(300));
-    }
-
-    #[test]
-    fn test_parse_duration_hours() {
-        let d = parse_duration("1h").unwrap();
-        assert_eq!(d, std::time::Duration::from_secs(3600));
-    }
-
-    #[test]
-    fn test_parse_duration_case_insensitive() {
-        let d = parse_duration("2M").unwrap();
-        assert_eq!(d, std::time::Duration::from_secs(120));
-    }
-
-    #[test]
-    fn test_parse_duration_whitespace_trimmed() {
-        let d = parse_duration("  10s  ").unwrap();
-        assert_eq!(d, std::time::Duration::from_secs(10));
-    }
-
-    #[test]
-    fn test_parse_duration_invalid_unit() {
-        assert!(parse_duration("5x").is_err());
-    }
-
-    #[test]
-    fn test_parse_duration_no_unit() {
-        assert!(parse_duration("100").is_err());
-    }
-
-    #[test]
-    fn test_parse_duration_empty() {
-        assert!(parse_duration("").is_err());
-    }
-
-    #[test]
-    fn test_parse_duration_garbage() {
-        assert!(parse_duration("abc").is_err());
-    }
 }

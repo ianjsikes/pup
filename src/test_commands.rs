@@ -3088,8 +3088,8 @@ async fn test_llm_obs_spans_search() {
         None,
         Some("my-app".into()),
         false,
-        None,
-        None,
+        "1h".into(),
+        "now".into(),
         10,
         None,
     )
@@ -3125,8 +3125,8 @@ async fn test_llm_obs_spans_search_from_is_numeric_string() {
         None,
         None,
         false,
-        Some("4h".into()),
-        Some("now".into()),
+        "4h".into(),
+        "now".into(),
         5,
         None,
     )
@@ -3152,8 +3152,8 @@ async fn test_llm_obs_spans_search_invalid_from_returns_error() {
         None,
         None,
         false,
-        Some("not-a-valid-time".into()),
-        None,
+        "not-a-valid-time".into(),
+        "now".into(),
         5,
         None,
     )
@@ -3178,7 +3178,18 @@ async fn test_llm_obs_spans_search_empty_results() {
     .await;
 
     let result = crate::commands::llm_obs::spans_search(
-        &cfg, None, None, None, None, None, None, false, None, None, 20, None,
+        &cfg,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        false,
+        "1h".into(),
+        "now".into(),
+        20,
+        None,
     )
     .await;
     assert!(
@@ -3204,7 +3215,18 @@ async fn test_llm_obs_spans_search_500() {
     .await;
 
     let result = crate::commands::llm_obs::spans_search(
-        &cfg, None, None, None, None, None, None, false, None, None, 20, None,
+        &cfg,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        false,
+        "1h".into(),
+        "now".into(),
+        20,
+        None,
     )
     .await;
     assert!(result.is_err(), "should fail on 500");
@@ -3228,7 +3250,18 @@ async fn test_llm_obs_spans_search_no_auth() {
     };
 
     let result = crate::commands::llm_obs::spans_search(
-        &cfg, None, None, None, None, None, None, false, None, None, 20, None,
+        &cfg,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        false,
+        "1h".into(),
+        "now".into(),
+        20,
+        None,
     )
     .await;
     assert!(result.is_err(), "should fail without auth");

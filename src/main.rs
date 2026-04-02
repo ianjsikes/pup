@@ -6008,10 +6008,18 @@ enum LlmObsSpansActions {
         ml_app: Option<String>,
         #[arg(long, help = "Return only root spans")]
         root_spans_only: bool,
-        #[arg(long, help = "Start time (relative like '1h' or RFC3339)")]
-        from: Option<String>,
-        #[arg(long, help = "End time (relative like 'now' or RFC3339)")]
-        to: Option<String>,
+        #[arg(
+            long,
+            default_value = "1h",
+            help = "Start time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'"
+        )]
+        from: String,
+        #[arg(
+            long,
+            default_value = "now",
+            help = "End time: 1h, 5min, 2hours, '5 minutes', RFC3339, Unix timestamp, or 'now'"
+        )]
+        to: String,
         #[arg(long, default_value = "20", help = "Number of spans to return")]
         limit: u32,
         #[arg(long, help = "Pagination cursor from a previous response")]

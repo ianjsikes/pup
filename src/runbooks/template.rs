@@ -50,28 +50,13 @@ fn resolve_token(inner: &str, vars: &HashMap<String, String>) -> String {
     }
 }
 
-/// Parse a duration string like "30s", "5m", or "1h" into a `std::time::Duration`.
+/// Parse a duration string into a `std::time::Duration`.
+///
+/// Delegates to `crate::util::parse_duration_to_millis` — accepts the same
+/// formats (30s, 5m, 1h, 7d, 1w, "5 minutes", etc.).
 pub fn parse_duration(s: &str) -> anyhow::Result<std::time::Duration> {
-    let s = s.trim();
-    if let Some(rest) = s.strip_suffix('s') {
-        let n: u64 = rest
-            .parse()
-            .map_err(|_| anyhow::anyhow!("invalid duration: {s}"))?;
-        return Ok(std::time::Duration::from_secs(n));
-    }
-    if let Some(rest) = s.strip_suffix('m') {
-        let n: u64 = rest
-            .parse()
-            .map_err(|_| anyhow::anyhow!("invalid duration: {s}"))?;
-        return Ok(std::time::Duration::from_secs(n * 60));
-    }
-    if let Some(rest) = s.strip_suffix('h') {
-        let n: u64 = rest
-            .parse()
-            .map_err(|_| anyhow::anyhow!("invalid duration: {s}"))?;
-        return Ok(std::time::Duration::from_secs(n * 3600));
-    }
-    anyhow::bail!("invalid duration '{}': expected format like 30s, 5m, 1h", s)
+    let ms = crate::util::parse_duration_to_millis(s)?;
+    Ok(std::time::Duration::from_millis(ms as u64))
 }
 
 #[cfg(test)]
@@ -124,11 +109,18 @@ mod tests {
             parse_duration("1h").unwrap(),
             std::time::Duration::from_secs(3600)
         );
+        assert_eq!(
+            parse_duration("7d").unwrap(),
+            std::time::Duration::from_secs(7 * 86400)
+        );
+        assert_eq!(
+            parse_duration("1w").unwrap(),
+            std::time::Duration::from_secs(7 * 86400)
+        );
     }
 
     #[test]
     fn test_parse_duration_invalid() {
-        assert!(parse_duration("5d").is_err());
         assert!(parse_duration("abc").is_err());
     }
 }

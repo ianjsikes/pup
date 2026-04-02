@@ -210,8 +210,8 @@ pub async fn spans_search(
     span_name: Option<String>,
     ml_app: Option<String>,
     root_spans_only: bool,
-    from: Option<String>,
-    to: Option<String>,
+    from: String,
+    to: String,
     limit: u32,
     cursor: Option<String>,
 ) -> Result<()> {
@@ -237,16 +237,13 @@ pub async fn spans_search(
     if let Some(a) = ml_app {
         body["ml_app"] = serde_json::json!(a);
     }
-    if let Some(f) = from {
-        let from_ms = crate::util::parse_time_to_unix_millis(&f)
-            .map_err(|e| anyhow::anyhow!("invalid --from value: {e}"))?;
-        body["from"] = serde_json::json!(from_ms.to_string());
-    }
-    if let Some(t) = to {
-        let to_ms = crate::util::parse_time_to_unix_millis(&t)
-            .map_err(|e| anyhow::anyhow!("invalid --to value: {e}"))?;
-        body["to"] = serde_json::json!(to_ms.to_string());
-    }
+    let from_ms = crate::util::parse_time_to_unix_millis(&from)
+        .map_err(|e| anyhow::anyhow!("invalid --from value: {e}"))?;
+    body["from"] = serde_json::json!(from_ms.to_string());
+
+    let to_ms = crate::util::parse_time_to_unix_millis(&to)
+        .map_err(|e| anyhow::anyhow!("invalid --to value: {e}"))?;
+    body["to"] = serde_json::json!(to_ms.to_string());
     if let Some(c) = cursor {
         body["cursor"] = serde_json::json!(c);
     }
