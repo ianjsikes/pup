@@ -184,8 +184,14 @@ pup dashboards delete "abc-123-def" --yes
 # List all SLOs
 pup slos list
 
-# Filter by tag
-pup slos list --tag="service:api"
+# Filter by name or API-supported query string
+pup slos list --query="monitor-history-reader"
+
+# Filter by a single SLO tag
+pup slos list --tags-query="team:slo-app"
+
+# Filter by metric query and paginate results
+pup slos list --metrics-query="sum:requests.error{service:api}" --limit=25 --offset=50
 ```
 
 ### Get SLO

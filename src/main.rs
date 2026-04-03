@@ -1970,7 +1970,7 @@ enum Commands {
     /// Indicators (SLIs). They support various calculation types and target windows.
     ///
     /// CAPABILITIES:
-    ///   • List all SLOs with status and error budget
+    ///   • List all SLOs with optional API-backed server-side filters
     ///   • Get detailed SLO configuration and history
     ///   • Delete SLOs (requires confirmation unless --yes flag is used)
     ///   • View SLO status, error budget burn rate, and target compliance
@@ -1994,6 +1994,12 @@ enum Commands {
     ///   # List all SLOs
     ///   pup slos list
     ///
+    ///   # Filter by name or API-supported query string
+    ///   pup slos list --query monitor-history-reader
+    ///
+    ///   # Filter by a single SLO tag
+    ///   pup slos list --tags-query team:slo-app
+    ///
     ///   # Get detailed SLO information
     ///   pup slos get abc-123-def
     ///
@@ -2015,6 +2021,10 @@ enum Commands {
     /// AUTHENTICATION:
     ///   Requires either OAuth2 authentication (pup auth login) or API keys
     ///   (DD_API_KEY and DD_APP_KEY environment variables).
+    ///
+    /// FILTERING:
+    ///   List filtering follows Datadog SLO API semantics and may differ from
+    ///   the Datadog web UI query language.
     #[command(verbatim_doc_comment)]
     Slos {
         #[command(subcommand)]
@@ -2918,8 +2928,19 @@ enum MetricMetadataActions {
 // ---- SLOs ----
 #[derive(Subcommand)]
 enum SloActions {
-    /// List all SLOs
-    List,
+    /// List all SLOs with optional API-backed filters
+    List {
+        #[arg(long, help = "Filter by SLO name or API-supported search string")]
+        query: Option<String>,
+        #[arg(long, help = "Filter by a single SLO tag")]
+        tags_query: Option<String>,
+        #[arg(long, help = "Filter by SLO numerator/denominator query")]
+        metrics_query: Option<String>,
+        #[arg(long, help = "Number of SLOs to return")]
+        limit: Option<i64>,
+        #[arg(long, help = "Pagination offset")]
+        offset: Option<i64>,
+    },
     /// Get SLO details
     Get { id: String },
     /// Create an SLO from JSON file
@@ -7831,7 +7852,16 @@ async fn main_inner() -> anyhow::Result<()> {
         Commands::Slos { action } => {
             cfg.validate_auth()?;
             match action {
-                SloActions::List => commands::slos::list(&cfg).await?,
+                SloActions::List {
+                    query,
+                    tags_query,
+                    metrics_query,
+                    limit,
+                    offset,
+                } => {
+                    commands::slos::list(&cfg, query, tags_query, metrics_query, limit, offset)
+                        .await?;
+                }
                 SloActions::Get { id } => commands::slos::get(&cfg, &id).await?,
                 SloActions::Create { file } => commands::slos::create(&cfg, &file).await?,
                 SloActions::Update { id, file } => {

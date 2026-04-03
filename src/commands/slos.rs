@@ -10,14 +10,37 @@ use crate::config::Config;
 use crate::formatter;
 use crate::util;
 
-pub async fn list(cfg: &Config) -> Result<()> {
+pub async fn list(
+    cfg: &Config,
+    query: Option<String>,
+    tags_query: Option<String>,
+    metrics_query: Option<String>,
+    limit: Option<i64>,
+    offset: Option<i64>,
+) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
         Some(c) => ServiceLevelObjectivesAPI::with_client_and_config(dd_cfg, c),
         None => ServiceLevelObjectivesAPI::with_config(dd_cfg),
     };
+    let mut params = ListSLOsOptionalParams::default();
+    if let Some(query) = query {
+        params = params.query(query);
+    }
+    if let Some(tags_query) = tags_query {
+        params = params.tags_query(tags_query);
+    }
+    if let Some(metrics_query) = metrics_query {
+        params = params.metrics_query(metrics_query);
+    }
+    if let Some(limit) = limit {
+        params = params.limit(limit);
+    }
+    if let Some(offset) = offset {
+        params = params.offset(offset);
+    }
     let resp = api
-        .list_slos(ListSLOsOptionalParams::default())
+        .list_slos(params)
         .await
         .map_err(|e| anyhow::anyhow!("failed to list SLOs: {e:?}"))?;
     formatter::output(cfg, &resp)
