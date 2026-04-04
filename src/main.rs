@@ -3249,7 +3249,7 @@ enum DowntimeActions {
     Cancel { id: String },
 }
 
-// ---- DDSQL ----
+// ---- DBM ----
 #[derive(Subcommand)]
 enum DbmActions {
     /// Manage DBM query samples

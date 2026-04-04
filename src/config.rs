@@ -195,24 +195,6 @@ impl Config {
         }
     }
 
-    /// Returns the app host (e.g., "app.datadoghq.com").
-    pub fn app_host(&self) -> String {
-        #[cfg(not(feature = "browser"))]
-        {
-            if let Ok(mock) = std::env::var("PUP_MOCK_SERVER") {
-                let host = mock
-                    .trim_start_matches("http://")
-                    .trim_start_matches("https://");
-                return host.to_string();
-            }
-        }
-        if self.site.contains("oncall") {
-            self.site.clone()
-        } else {
-            format!("app.{}", self.site)
-        }
-    }
-
     /// Returns the full API base URL (e.g., "https://api.datadoghq.com").
     /// Respects PUP_MOCK_SERVER for testing (native/WASI only).
     pub fn api_base_url(&self) -> String {
@@ -223,18 +205,6 @@ impl Config {
             }
         }
         format!("https://{}", self.api_host())
-    }
-
-    /// Returns the full app base URL (e.g., "https://app.datadoghq.com").
-    /// Respects PUP_MOCK_SERVER for testing (native/WASI only).
-    pub fn app_base_url(&self) -> String {
-        #[cfg(not(feature = "browser"))]
-        {
-            if let Ok(mock) = std::env::var("PUP_MOCK_SERVER") {
-                return mock;
-            }
-        }
-        format!("https://{}", self.app_host())
     }
 }
 
@@ -778,76 +748,6 @@ mod tests {
         std::env::set_var("PUP_MOCK_SERVER", "http://127.0.0.1:5678");
         let cfg = make_cfg(None, None, Some("t"));
         assert_eq!(cfg.api_host(), "127.0.0.1:5678");
-        std::env::remove_var("PUP_MOCK_SERVER");
-    }
-
-    #[test]
-    fn test_app_host_standard() {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
-        std::env::remove_var("PUP_MOCK_SERVER");
-        let cfg = make_cfg(None, None, Some("t"));
-        assert_eq!(cfg.app_host(), "app.datadoghq.com");
-    }
-
-    #[test]
-    fn test_app_host_eu() {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
-        std::env::remove_var("PUP_MOCK_SERVER");
-        let mut cfg = make_cfg(None, None, Some("t"));
-        cfg.site = "datadoghq.eu".into();
-        assert_eq!(cfg.app_host(), "app.datadoghq.eu");
-    }
-
-    #[test]
-    fn test_app_host_custom_subdomain() {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
-        std::env::remove_var("PUP_MOCK_SERVER");
-        let mut cfg = make_cfg(None, None, Some("t"));
-        cfg.site = normalize_site("app.customname.datadoghq.com");
-        assert_eq!(cfg.app_host(), "app.customname.datadoghq.com");
-    }
-
-    #[test]
-    fn test_app_host_mock_server() {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
-        std::env::set_var("PUP_MOCK_SERVER", "http://127.0.0.1:8765");
-        let cfg = make_cfg(None, None, Some("t"));
-        assert_eq!(cfg.app_host(), "127.0.0.1:8765");
-        std::env::remove_var("PUP_MOCK_SERVER");
-    }
-
-    #[test]
-    fn test_app_base_url_standard() {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
-        std::env::remove_var("PUP_MOCK_SERVER");
-        let cfg = make_cfg(None, None, Some("t"));
-        assert_eq!(cfg.app_base_url(), "https://app.datadoghq.com");
-    }
-
-    #[test]
-    fn test_app_base_url_region() {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
-        std::env::remove_var("PUP_MOCK_SERVER");
-        let mut cfg = make_cfg(None, None, Some("t"));
-        cfg.site = normalize_site("app.us3.datadoghq.com");
-        assert_eq!(cfg.app_base_url(), "https://app.us3.datadoghq.com");
-    }
-
-    #[test]
-    fn test_app_base_url_custom_subdomain() {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
-        std::env::remove_var("PUP_MOCK_SERVER");
-        let mut cfg = make_cfg(None, None, Some("t"));
-        cfg.site = normalize_site("app.customname.datadoghq.com");
-        assert_eq!(cfg.app_base_url(), "https://app.customname.datadoghq.com");
-    }
-
-    #[test]
-    fn test_app_base_url_mock_server() {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
-        std::env::set_var("PUP_MOCK_SERVER", "http://127.0.0.1:4321");
-        let cfg = make_cfg(None, None, Some("t"));
-        assert_eq!(cfg.app_base_url(), "http://127.0.0.1:4321");
         std::env::remove_var("PUP_MOCK_SERVER");
     }
 
