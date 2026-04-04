@@ -4357,7 +4357,10 @@ enum RumActions {
     },
     /// Aggregate RUM events by facets
     Aggregate {
-        #[arg(long, help = "RUM query filter (e.g. '@type:error @application.name:\"My App\"')")]
+        #[arg(
+            long,
+            help = "RUM query filter (e.g. '@type:error @application.name:\"My App\"')"
+        )]
         query: Option<String>,
         #[arg(long, default_value = "1h", help = "Start time")]
         from: String,
