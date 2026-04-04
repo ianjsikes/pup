@@ -3,9 +3,9 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 #[cfg(not(target_arch = "wasm32"))]
 use async_trait::async_trait;
 #[cfg(not(target_arch = "wasm32"))]
-use reqwest_middleware::{Middleware, Next};
-#[cfg(not(target_arch = "wasm32"))]
 use http::Extensions;
+#[cfg(not(target_arch = "wasm32"))]
+use reqwest_middleware::{Middleware, Next};
 
 use crate::config::Config;
 

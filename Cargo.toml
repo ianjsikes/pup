@@ -42,7 +42,6 @@ native = [
 wasi = [
     "dep:datadog-api-client",
     "datadog-api-client/rustls-tls",
-    "datadog-api-client/retry",
     "dep:sha2",
     "dep:base64",
     "dep:rand",
