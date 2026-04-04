@@ -2393,7 +2393,7 @@ async fn mock_post(
 }
 
 #[tokio::test]
-async fn test_dbm_samples_search_uses_app_endpoint_and_payload() {
+async fn test_dbm_samples_search_uses_documented_payload() {
     let _lock = lock_env();
     let mut server = mockito::Server::new_async().await;
     let cfg = test_config(&server.url());
@@ -2405,13 +2405,13 @@ async fn test_dbm_samples_search_uses_app_endpoint_and_payload() {
             "databasequery".into(),
         ))
         .match_body(mockito::Matcher::Regex(
-            r#""indexes":\["databasequery"\]"#.to_string(),
+            r#""list":\{"indexes":\["databasequery"\]"#.to_string(),
         ))
         .match_body(mockito::Matcher::Regex(
             r#""query":"service:db""#.to_string(),
         ))
         .match_body(mockito::Matcher::Regex(
-            r#""sorts":\["timestamp"\]"#.to_string(),
+            r#""sorts":\[\{"time":\{"order":"asc"\}\}\]"#.to_string(),
         ))
         .match_body(mockito::Matcher::Regex(r#""from":\d{13}"#.to_string()))
         .match_body(mockito::Matcher::Regex(r#""to":\d{13}"#.to_string()))

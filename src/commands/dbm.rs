@@ -7,8 +7,8 @@ use crate::util;
 
 fn parse_sort(sort: &str) -> Result<&'static str> {
     match sort {
-        "asc" | "timestamp" => Ok("timestamp"),
-        "desc" | "-timestamp" => Ok("-timestamp"),
+        "asc" | "timestamp" => Ok("asc"),
+        "desc" | "-timestamp" => Ok("desc"),
         _ => bail!("invalid --sort value: {sort:?}\nExpected: asc, desc, timestamp, or -timestamp"),
     }
 }
@@ -25,13 +25,17 @@ fn build_search_body(
     }
 
     Ok(serde_json::json!({
-        "indexes": ["databasequery"],
-        "limit": limit,
-        "search": { "query": query },
-        "sorts": [parse_sort(sort)?],
-        "time": {
-            "from": from_ms,
-            "to": to_ms
+        "list": {
+            "indexes": ["databasequery"],
+            "limit": limit,
+            "search": { "query": query },
+            "sorts": [
+                { "time": { "order": parse_sort(sort)? } }
+            ],
+            "time": {
+                "from": from_ms,
+                "to": to_ms
+            }
         }
     }))
 }
@@ -63,14 +67,14 @@ mod tests {
 
     #[test]
     fn test_parse_sort_ascending_values() {
-        assert_eq!(parse_sort("asc").unwrap(), "timestamp");
-        assert_eq!(parse_sort("timestamp").unwrap(), "timestamp");
+        assert_eq!(parse_sort("asc").unwrap(), "asc");
+        assert_eq!(parse_sort("timestamp").unwrap(), "asc");
     }
 
     #[test]
     fn test_parse_sort_descending_values() {
-        assert_eq!(parse_sort("desc").unwrap(), "-timestamp");
-        assert_eq!(parse_sort("-timestamp").unwrap(), "-timestamp");
+        assert_eq!(parse_sort("desc").unwrap(), "desc");
+        assert_eq!(parse_sort("-timestamp").unwrap(), "desc");
     }
 
     #[test]
@@ -89,12 +93,18 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(body["indexes"], serde_json::json!(["databasequery"]));
-        assert_eq!(body["limit"], 10);
-        assert_eq!(body["search"]["query"], "service:db");
-        assert_eq!(body["sorts"], serde_json::json!(["-timestamp"]));
-        assert_eq!(body["time"]["from"], 1_700_000_000_000_i64);
-        assert_eq!(body["time"]["to"], 1_700_000_060_000_i64);
+        assert_eq!(
+            body["list"]["indexes"],
+            serde_json::json!(["databasequery"])
+        );
+        assert_eq!(body["list"]["limit"], 10);
+        assert_eq!(body["list"]["search"]["query"], "service:db");
+        assert_eq!(
+            body["list"]["sorts"],
+            serde_json::json!([{ "time": { "order": "desc" } }])
+        );
+        assert_eq!(body["list"]["time"]["from"], 1_700_000_000_000_i64);
+        assert_eq!(body["list"]["time"]["to"], 1_700_000_060_000_i64);
     }
 
     #[test]
