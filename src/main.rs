@@ -1583,30 +1583,6 @@ enum Commands {
         #[command(subcommand)]
         action: MonitorActions,
     },
-    /// Manage Microsoft Teams integration
-    ///
-    /// Configure the Datadog Microsoft Teams integration via the API.
-    ///
-    /// CAPABILITIES:
-    ///   • List, create, get, update, delete tenant-based handles (channels)
-    ///   • Look up a channel by tenant/team/channel name
-    ///   • List, create, get, update, delete workflow webhook handles
-    ///
-    /// EXAMPLES:
-    ///   pup ms-teams handles list
-    ///   pup ms-teams handles create --file handle.json
-    ///   pup ms-teams handles get <handle-id>
-    ///   pup ms-teams channel-get my-tenant my-team my-channel
-    ///   pup ms-teams workflows list
-    ///
-    /// AUTHENTICATION:
-    ///   Requires either OAuth2 authentication (pup auth login) or API keys
-    ///   (DD_API_KEY and DD_APP_KEY environment variables).
-    #[command(name = "ms-teams", verbatim_doc_comment)]
-    MsTeams {
-        #[command(subcommand)]
-        action: MsTeamsActions,
-    },
     /// Manage network monitoring
     ///
     /// Query network monitoring data including flows and devices.
@@ -5579,6 +5555,12 @@ enum IntegrationActions {
         #[command(subcommand)]
         action: GoogleChatActions,
     },
+    /// Manage Microsoft Teams integration
+    #[command(name = "ms-teams")]
+    MsTeams {
+        #[command(subcommand)]
+        action: MsTeamsActions,
+    },
     /// Manage AWS integrations
     Aws {
         #[command(subcommand)]
@@ -7705,59 +7687,6 @@ async fn main_inner() -> anyhow::Result<()> {
                 }
             }
         }
-        // --- MS Teams ---
-        Commands::MsTeams { action } => {
-            cfg.validate_auth()?;
-            match action {
-                MsTeamsActions::Handles { action } => match action {
-                    MsTeamsHandleActions::List => {
-                        commands::ms_teams::handles_list(&cfg).await?;
-                    }
-                    MsTeamsHandleActions::Get { handle_id } => {
-                        commands::ms_teams::handles_get(&cfg, &handle_id).await?;
-                    }
-                    MsTeamsHandleActions::Create { file } => {
-                        commands::ms_teams::handles_create(&cfg, &file).await?;
-                    }
-                    MsTeamsHandleActions::Update { handle_id, file } => {
-                        commands::ms_teams::handles_update(&cfg, &handle_id, &file).await?;
-                    }
-                    MsTeamsHandleActions::Delete { handle_id } => {
-                        commands::ms_teams::handles_delete(&cfg, &handle_id).await?;
-                    }
-                },
-                MsTeamsActions::ChannelGet {
-                    tenant_name,
-                    team_name,
-                    channel_name,
-                } => {
-                    commands::ms_teams::channel_get_by_name(
-                        &cfg,
-                        &tenant_name,
-                        &team_name,
-                        &channel_name,
-                    )
-                    .await?;
-                }
-                MsTeamsActions::Workflows { action } => match action {
-                    MsTeamsWorkflowActions::List => {
-                        commands::ms_teams::workflows_list(&cfg).await?;
-                    }
-                    MsTeamsWorkflowActions::Get { handle_id } => {
-                        commands::ms_teams::workflows_get(&cfg, &handle_id).await?;
-                    }
-                    MsTeamsWorkflowActions::Create { file } => {
-                        commands::ms_teams::workflows_create(&cfg, &file).await?;
-                    }
-                    MsTeamsWorkflowActions::Update { handle_id, file } => {
-                        commands::ms_teams::workflows_update(&cfg, &handle_id, &file).await?;
-                    }
-                    MsTeamsWorkflowActions::Delete { handle_id } => {
-                        commands::ms_teams::workflows_delete(&cfg, &handle_id).await?;
-                    }
-                },
-            }
-        }
         // --- Logs ---
         Commands::Logs { action } => {
             cfg.validate_auth()?;
@@ -9679,6 +9608,55 @@ async fn main_inner() -> anyhow::Result<()> {
                         commands::google_chat::space_get(&cfg, &domain_name, &space_display_name)
                             .await?;
                     }
+                },
+                IntegrationActions::MsTeams { action } => match action {
+                    MsTeamsActions::Handles { action } => match action {
+                        MsTeamsHandleActions::List => {
+                            commands::ms_teams::handles_list(&cfg).await?;
+                        }
+                        MsTeamsHandleActions::Get { handle_id } => {
+                            commands::ms_teams::handles_get(&cfg, &handle_id).await?;
+                        }
+                        MsTeamsHandleActions::Create { file } => {
+                            commands::ms_teams::handles_create(&cfg, &file).await?;
+                        }
+                        MsTeamsHandleActions::Update { handle_id, file } => {
+                            commands::ms_teams::handles_update(&cfg, &handle_id, &file).await?;
+                        }
+                        MsTeamsHandleActions::Delete { handle_id } => {
+                            commands::ms_teams::handles_delete(&cfg, &handle_id).await?;
+                        }
+                    },
+                    MsTeamsActions::ChannelGet {
+                        tenant_name,
+                        team_name,
+                        channel_name,
+                    } => {
+                        commands::ms_teams::channel_get_by_name(
+                            &cfg,
+                            &tenant_name,
+                            &team_name,
+                            &channel_name,
+                        )
+                        .await?;
+                    }
+                    MsTeamsActions::Workflows { action } => match action {
+                        MsTeamsWorkflowActions::List => {
+                            commands::ms_teams::workflows_list(&cfg).await?;
+                        }
+                        MsTeamsWorkflowActions::Get { handle_id } => {
+                            commands::ms_teams::workflows_get(&cfg, &handle_id).await?;
+                        }
+                        MsTeamsWorkflowActions::Create { file } => {
+                            commands::ms_teams::workflows_create(&cfg, &file).await?;
+                        }
+                        MsTeamsWorkflowActions::Update { handle_id, file } => {
+                            commands::ms_teams::workflows_update(&cfg, &handle_id, &file).await?;
+                        }
+                        MsTeamsWorkflowActions::Delete { handle_id } => {
+                            commands::ms_teams::workflows_delete(&cfg, &handle_id).await?;
+                        }
+                    },
                 },
                 IntegrationActions::Aws { action } => match action {
                     IntegrationAwsActions::CloudAuth { action } => match action {
