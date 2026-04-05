@@ -60,6 +60,7 @@ pub mod security;
 pub mod service_catalog;
 pub mod skills;
 pub mod slos;
+pub mod software_catalog;
 pub mod static_analysis;
 pub mod status_pages;
 pub mod symdb;

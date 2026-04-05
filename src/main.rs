@@ -2047,6 +2047,32 @@ enum Commands {
         #[command(subcommand)]
         action: SloActions,
     },
+    /// Manage the Datadog Software Catalog
+    ///
+    /// COMMANDS:
+    ///   entities list     List catalog entities
+    ///   entities upsert   Create or update entities from a JSON file
+    ///   entities delete   Delete an entity
+    ///   entities preview  Preview entities
+    ///   kinds list        List catalog kinds
+    ///   kinds upsert      Create or update a kind from a JSON file
+    ///   kinds delete      Delete a kind
+    ///   relations list    List catalog relations
+    ///
+    /// EXAMPLES:
+    ///   pup software-catalog entities list
+    ///   pup software-catalog entities upsert --file entity.json
+    ///   pup software-catalog entities delete <entity-id>
+    ///   pup software-catalog kinds list
+    ///   pup software-catalog relations list
+    ///
+    /// AUTHENTICATION:
+    ///   Requires either OAuth2 authentication or API keys.
+    #[command(name = "software-catalog", verbatim_doc_comment)]
+    SoftwareCatalog {
+        #[command(subcommand)]
+        action: SoftwareCatalogActions,
+    },
     /// Manage static analysis
     ///
     /// Manage static analysis for code security and quality.
@@ -4326,6 +4352,60 @@ enum ServiceCatalogActions {
     List,
     /// Get service details
     Get { service_name: String },
+}
+
+// ---- Software Catalog ----
+#[derive(Subcommand)]
+enum SoftwareCatalogActions {
+    /// Manage catalog entities
+    Entities {
+        #[command(subcommand)]
+        action: SoftwareCatalogEntityActions,
+    },
+    /// Manage catalog kinds
+    Kinds {
+        #[command(subcommand)]
+        action: SoftwareCatalogKindActions,
+    },
+    /// Manage catalog relations
+    Relations {
+        #[command(subcommand)]
+        action: SoftwareCatalogRelationActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum SoftwareCatalogEntityActions {
+    /// List catalog entities
+    List,
+    /// Create or update entities from a JSON file
+    Upsert {
+        #[arg(long, help = "JSON file with entity definition (required)")]
+        file: String,
+    },
+    /// Delete an entity
+    Delete { entity_id: String },
+    /// Preview catalog entities
+    Preview,
+}
+
+#[derive(Subcommand)]
+enum SoftwareCatalogKindActions {
+    /// List catalog kinds
+    List,
+    /// Create or update a kind from a JSON file
+    Upsert {
+        #[arg(long, help = "JSON file with kind definition (required)")]
+        file: String,
+    },
+    /// Delete a kind
+    Delete { kind_id: String },
+}
+
+#[derive(Subcommand)]
+enum SoftwareCatalogRelationActions {
+    /// List catalog relations
+    List,
 }
 
 // ---- API Keys ----
@@ -8712,6 +8792,42 @@ async fn main_inner() -> anyhow::Result<()> {
                 ServiceCatalogActions::Get { service_name } => {
                     commands::service_catalog::get(&cfg, &service_name).await?;
                 }
+            }
+        }
+        // --- Software Catalog ---
+        Commands::SoftwareCatalog { action } => {
+            cfg.validate_auth()?;
+            match action {
+                SoftwareCatalogActions::Entities { action } => match action {
+                    SoftwareCatalogEntityActions::List => {
+                        commands::software_catalog::entities_list(&cfg).await?;
+                    }
+                    SoftwareCatalogEntityActions::Upsert { file } => {
+                        commands::software_catalog::entities_upsert(&cfg, &file).await?;
+                    }
+                    SoftwareCatalogEntityActions::Delete { entity_id } => {
+                        commands::software_catalog::entities_delete(&cfg, &entity_id).await?;
+                    }
+                    SoftwareCatalogEntityActions::Preview => {
+                        commands::software_catalog::entities_preview(&cfg).await?;
+                    }
+                },
+                SoftwareCatalogActions::Kinds { action } => match action {
+                    SoftwareCatalogKindActions::List => {
+                        commands::software_catalog::kinds_list(&cfg).await?;
+                    }
+                    SoftwareCatalogKindActions::Upsert { file } => {
+                        commands::software_catalog::kinds_upsert(&cfg, &file).await?;
+                    }
+                    SoftwareCatalogKindActions::Delete { kind_id } => {
+                        commands::software_catalog::kinds_delete(&cfg, &kind_id).await?;
+                    }
+                },
+                SoftwareCatalogActions::Relations { action } => match action {
+                    SoftwareCatalogRelationActions::List => {
+                        commands::software_catalog::relations_list(&cfg).await?;
+                    }
+                },
             }
         }
         // --- API Keys ---
