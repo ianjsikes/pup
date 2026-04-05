@@ -1957,32 +1957,6 @@ enum Commands {
         #[command(subcommand)]
         action: ServiceCatalogActions,
     },
-    /// Manage the Datadog Software Catalog
-    ///
-    /// COMMANDS:
-    ///   entities list     List catalog entities
-    ///   entities upsert   Create or update entities from a JSON file
-    ///   entities delete   Delete an entity
-    ///   entities preview  Preview entities
-    ///   kinds list        List catalog kinds
-    ///   kinds upsert      Create or update a kind from a JSON file
-    ///   kinds delete      Delete a kind
-    ///   relations list    List catalog relations
-    ///
-    /// EXAMPLES:
-    ///   pup software-catalog entities list
-    ///   pup software-catalog entities upsert --file entity.json
-    ///   pup software-catalog entities delete <entity-id>
-    ///   pup software-catalog kinds list
-    ///   pup software-catalog relations list
-    ///
-    /// AUTHENTICATION:
-    ///   Requires either OAuth2 authentication or API keys.
-    #[command(name = "software-catalog", verbatim_doc_comment)]
-    SoftwareCatalog {
-        #[command(subcommand)]
-        action: SoftwareCatalogActions,
-    },
     /// Manage agent skills for AI coding assistants
     ///
     /// Install structured workflow guides, domain references, and specialized
@@ -2072,6 +2046,32 @@ enum Commands {
     Slos {
         #[command(subcommand)]
         action: SloActions,
+    },
+    /// Manage the Datadog Software Catalog
+    ///
+    /// COMMANDS:
+    ///   entities list     List catalog entities
+    ///   entities upsert   Create or update entities from a JSON file
+    ///   entities delete   Delete an entity
+    ///   entities preview  Preview entities
+    ///   kinds list        List catalog kinds
+    ///   kinds upsert      Create or update a kind from a JSON file
+    ///   kinds delete      Delete a kind
+    ///   relations list    List catalog relations
+    ///
+    /// EXAMPLES:
+    ///   pup software-catalog entities list
+    ///   pup software-catalog entities upsert --file entity.json
+    ///   pup software-catalog entities delete <entity-id>
+    ///   pup software-catalog kinds list
+    ///   pup software-catalog relations list
+    ///
+    /// AUTHENTICATION:
+    ///   Requires either OAuth2 authentication or API keys.
+    #[command(name = "software-catalog", verbatim_doc_comment)]
+    SoftwareCatalog {
+        #[command(subcommand)]
+        action: SoftwareCatalogActions,
     },
     /// Manage static analysis
     ///
