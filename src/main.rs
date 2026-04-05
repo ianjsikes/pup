@@ -5050,6 +5050,117 @@ enum OnCallActions {
         #[command(subcommand)]
         action: OnCallTeamActions,
     },
+    /// Manage escalation policies
+    EscalationPolicies {
+        #[command(subcommand)]
+        action: OnCallEscalationPoliciesActions,
+    },
+    /// Manage on-call schedules
+    Schedules {
+        #[command(subcommand)]
+        action: OnCallSchedulesActions,
+    },
+    /// Manage user notification channels
+    NotificationChannels {
+        #[command(subcommand)]
+        action: OnCallNotificationChannelsActions,
+    },
+    /// Manage user notification rules
+    NotificationRules {
+        #[command(subcommand)]
+        action: OnCallNotificationRulesActions,
+    },
+    /// Manage on-call pages
+    Pages {
+        #[command(subcommand)]
+        action: OnCallPagesActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum OnCallEscalationPoliciesActions {
+    /// Get an escalation policy
+    Get { policy_id: String },
+    /// Create an escalation policy from a JSON file
+    Create {
+        #[arg(long, help = "Path to JSON file")]
+        file: String,
+    },
+    /// Update an escalation policy from a JSON file
+    Update {
+        policy_id: String,
+        #[arg(long, help = "Path to JSON file")]
+        file: String,
+    },
+    /// Delete an escalation policy
+    Delete { policy_id: String },
+}
+
+#[derive(Subcommand)]
+enum OnCallSchedulesActions {
+    /// Get an on-call schedule
+    Get { schedule_id: String },
+    /// Create an on-call schedule from a JSON file
+    Create {
+        #[arg(long, help = "Path to JSON file")]
+        file: String,
+    },
+    /// Update an on-call schedule from a JSON file
+    Update {
+        schedule_id: String,
+        #[arg(long, help = "Path to JSON file")]
+        file: String,
+    },
+    /// Delete an on-call schedule
+    Delete { schedule_id: String },
+}
+
+#[derive(Subcommand)]
+enum OnCallNotificationChannelsActions {
+    /// List notification channels for a user
+    List { user_id: String },
+    /// Get a notification channel for a user
+    Get { user_id: String, channel_id: String },
+    /// Create a notification channel for a user from a JSON file
+    Create {
+        user_id: String,
+        #[arg(long, help = "Path to JSON file")]
+        file: String,
+    },
+    /// Delete a notification channel for a user
+    Delete { user_id: String, channel_id: String },
+}
+
+#[derive(Subcommand)]
+enum OnCallNotificationRulesActions {
+    /// List notification rules for a user
+    List { user_id: String },
+    /// Get a notification rule for a user
+    Get { user_id: String, rule_id: String },
+    /// Create a notification rule for a user from a JSON file
+    Create {
+        user_id: String,
+        #[arg(long, help = "Path to JSON file")]
+        file: String,
+    },
+    /// Update a notification rule for a user from a JSON file
+    Update {
+        user_id: String,
+        rule_id: String,
+        #[arg(long, help = "Path to JSON file")]
+        file: String,
+    },
+    /// Delete a notification rule for a user
+    Delete { user_id: String, rule_id: String },
+}
+
+#[derive(Subcommand)]
+enum OnCallPagesActions {
+    /// Create an on-call page from a JSON file
+    Create {
+        #[arg(long, help = "Path to JSON file")]
+        file: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -9451,6 +9562,92 @@ async fn main_inner() -> anyhow::Result<()> {
                             commands::on_call::memberships_remove(&cfg, &team_id, &user_id).await?;
                         }
                     },
+                },
+                OnCallActions::EscalationPolicies { action } => match action {
+                    OnCallEscalationPoliciesActions::Get { policy_id } => {
+                        commands::on_call::escalation_policies_get(&cfg, &policy_id).await?;
+                    }
+                    OnCallEscalationPoliciesActions::Create { file } => {
+                        commands::on_call::escalation_policies_create(&cfg, &file).await?;
+                    }
+                    OnCallEscalationPoliciesActions::Update { policy_id, file } => {
+                        commands::on_call::escalation_policies_update(&cfg, &policy_id, &file)
+                            .await?;
+                    }
+                    OnCallEscalationPoliciesActions::Delete { policy_id } => {
+                        commands::on_call::escalation_policies_delete(&cfg, &policy_id).await?;
+                    }
+                },
+                OnCallActions::Schedules { action } => match action {
+                    OnCallSchedulesActions::Get { schedule_id } => {
+                        commands::on_call::schedules_get(&cfg, &schedule_id).await?;
+                    }
+                    OnCallSchedulesActions::Create { file } => {
+                        commands::on_call::schedules_create(&cfg, &file).await?;
+                    }
+                    OnCallSchedulesActions::Update { schedule_id, file } => {
+                        commands::on_call::schedules_update(&cfg, &schedule_id, &file).await?;
+                    }
+                    OnCallSchedulesActions::Delete { schedule_id } => {
+                        commands::on_call::schedules_delete(&cfg, &schedule_id).await?;
+                    }
+                },
+                OnCallActions::NotificationChannels { action } => match action {
+                    OnCallNotificationChannelsActions::List { user_id } => {
+                        commands::on_call::notification_channels_list(&cfg, &user_id).await?;
+                    }
+                    OnCallNotificationChannelsActions::Get {
+                        user_id,
+                        channel_id,
+                    } => {
+                        commands::on_call::notification_channels_get(&cfg, &user_id, &channel_id)
+                            .await?;
+                    }
+                    OnCallNotificationChannelsActions::Create { user_id, file } => {
+                        commands::on_call::notification_channels_create(&cfg, &user_id, &file)
+                            .await?;
+                    }
+                    OnCallNotificationChannelsActions::Delete {
+                        user_id,
+                        channel_id,
+                    } => {
+                        commands::on_call::notification_channels_delete(
+                            &cfg,
+                            &user_id,
+                            &channel_id,
+                        )
+                        .await?;
+                    }
+                },
+                OnCallActions::NotificationRules { action } => match action {
+                    OnCallNotificationRulesActions::List { user_id } => {
+                        commands::on_call::notification_rules_list(&cfg, &user_id).await?;
+                    }
+                    OnCallNotificationRulesActions::Get { user_id, rule_id } => {
+                        commands::on_call::notification_rules_get(&cfg, &user_id, &rule_id).await?;
+                    }
+                    OnCallNotificationRulesActions::Create { user_id, file } => {
+                        commands::on_call::notification_rules_create(&cfg, &user_id, &file).await?;
+                    }
+                    OnCallNotificationRulesActions::Update {
+                        user_id,
+                        rule_id,
+                        file,
+                    } => {
+                        commands::on_call::notification_rules_update(
+                            &cfg, &user_id, &rule_id, &file,
+                        )
+                        .await?;
+                    }
+                    OnCallNotificationRulesActions::Delete { user_id, rule_id } => {
+                        commands::on_call::notification_rules_delete(&cfg, &user_id, &rule_id)
+                            .await?;
+                    }
+                },
+                OnCallActions::Pages { action } => match action {
+                    OnCallPagesActions::Create { file } => {
+                        commands::on_call::pages_create(&cfg, &file).await?;
+                    }
                 },
             }
         }

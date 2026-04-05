@@ -1707,6 +1707,214 @@ async fn test_on_call_teams_delete() {
     cleanup_env();
 }
 
+// --- On-Call Escalation Policies ---
+#[tokio::test]
+async fn test_on_call_escalation_policies_get() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{"data": {"type": "policies"}}"#).await;
+    let result = crate::commands::on_call::escalation_policies_get(&cfg, "p1").await;
+    assert!(
+        result.is_ok(),
+        "escalation policies get failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+}
+#[tokio::test]
+async fn test_on_call_escalation_policies_delete() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{}"#).await;
+    let result = crate::commands::on_call::escalation_policies_delete(&cfg, "p1").await;
+    assert!(
+        result.is_ok(),
+        "escalation policies delete failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+}
+#[tokio::test]
+async fn test_on_call_escalation_policies_get_error() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    s.mock("GET", mockito::Matcher::Any)
+        .match_query(mockito::Matcher::Any)
+        .with_status(500)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"errors": ["internal error"]}"#)
+        .create_async()
+        .await;
+    let result = crate::commands::on_call::escalation_policies_get(&cfg, "p1").await;
+    assert!(result.is_err(), "expected error on 500 response");
+    cleanup_env();
+}
+
+// --- On-Call Schedules ---
+#[tokio::test]
+async fn test_on_call_schedules_get() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{"data": {"type": "schedules"}}"#).await;
+    let result = crate::commands::on_call::schedules_get(&cfg, "s1").await;
+    assert!(result.is_ok(), "schedules get failed: {:?}", result.err());
+    cleanup_env();
+}
+#[tokio::test]
+async fn test_on_call_schedules_delete() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{}"#).await;
+    let result = crate::commands::on_call::schedules_delete(&cfg, "s1").await;
+    assert!(
+        result.is_ok(),
+        "schedules delete failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+}
+#[tokio::test]
+async fn test_on_call_schedules_get_error() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    s.mock("GET", mockito::Matcher::Any)
+        .match_query(mockito::Matcher::Any)
+        .with_status(500)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"errors": ["internal error"]}"#)
+        .create_async()
+        .await;
+    let result = crate::commands::on_call::schedules_get(&cfg, "s1").await;
+    assert!(result.is_err(), "expected error on 500 response");
+    cleanup_env();
+}
+
+// --- On-Call Notification Channels ---
+#[tokio::test]
+async fn test_on_call_notification_channels_list() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{"data": []}"#).await;
+    let result = crate::commands::on_call::notification_channels_list(&cfg, "u1").await;
+    assert!(
+        result.is_ok(),
+        "notification channels list failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+}
+#[tokio::test]
+async fn test_on_call_notification_channels_get() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{"data": {"type": "notification_channels"}}"#).await;
+    let result = crate::commands::on_call::notification_channels_get(&cfg, "u1", "c1").await;
+    assert!(
+        result.is_ok(),
+        "notification channels get failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+}
+#[tokio::test]
+async fn test_on_call_notification_channels_delete() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{}"#).await;
+    let result = crate::commands::on_call::notification_channels_delete(&cfg, "u1", "c1").await;
+    assert!(
+        result.is_ok(),
+        "notification channels delete failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+}
+#[tokio::test]
+async fn test_on_call_notification_channels_list_error() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    s.mock("GET", mockito::Matcher::Any)
+        .match_query(mockito::Matcher::Any)
+        .with_status(500)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"errors": ["internal error"]}"#)
+        .create_async()
+        .await;
+    let result = crate::commands::on_call::notification_channels_list(&cfg, "u1").await;
+    assert!(result.is_err(), "expected error on 500 response");
+    cleanup_env();
+}
+
+// --- On-Call Notification Rules ---
+#[tokio::test]
+async fn test_on_call_notification_rules_list() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{"data": []}"#).await;
+    let result = crate::commands::on_call::notification_rules_list(&cfg, "u1").await;
+    assert!(
+        result.is_ok(),
+        "notification rules list failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+}
+#[tokio::test]
+async fn test_on_call_notification_rules_get() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{"data": {"type": "notification_rules"}}"#).await;
+    let result = crate::commands::on_call::notification_rules_get(&cfg, "u1", "r1").await;
+    assert!(
+        result.is_ok(),
+        "notification rules get failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+}
+#[tokio::test]
+async fn test_on_call_notification_rules_delete() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    mock_all(&mut s, r#"{}"#).await;
+    let result = crate::commands::on_call::notification_rules_delete(&cfg, "u1", "r1").await;
+    assert!(
+        result.is_ok(),
+        "notification rules delete failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+}
+#[tokio::test]
+async fn test_on_call_notification_rules_list_error() {
+    let _lock = lock_env();
+    let mut s = mockito::Server::new_async().await;
+    let cfg = test_config(&s.url());
+    s.mock("GET", mockito::Matcher::Any)
+        .match_query(mockito::Matcher::Any)
+        .with_status(500)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"errors": ["internal error"]}"#)
+        .create_async()
+        .await;
+    let result = crate::commands::on_call::notification_rules_list(&cfg, "u1").await;
+    assert!(result.is_err(), "expected error on 500 response");
+    cleanup_env();
+}
+
 // --- Security ---
 #[tokio::test]
 async fn test_security_rules_list() {
