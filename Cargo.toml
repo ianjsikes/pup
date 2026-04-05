@@ -138,10 +138,10 @@ dirs = { version = "6", optional = true }
 open = { version = "5", optional = true }
 
 # ---- Browser WASM dependencies (wasm-bindgen) ----
-wasm-bindgen = { version = "=0.2.117", optional = true }
-wasm-bindgen-futures = { version = "=0.4.67", optional = true }
-js-sys = { version = "=0.3.94", optional = true }
-web-sys = { version = "=0.3.94", features = ["Window", "Storage"], optional = true }
+wasm-bindgen = { version = "=0.2.114", optional = true }
+wasm-bindgen-futures = { version = "=0.4.64", optional = true }
+js-sys = { version = "=0.3.91", optional = true }
+web-sys = { version = "=0.3.91", features = ["Window", "Storage"], optional = true }
 serde-wasm-bindgen = { version = "0.6", optional = true }
 
 # RNG support in browser WASM (getrandom 0.4 — wasm_js feature enables JS crypto API)
