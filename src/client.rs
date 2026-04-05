@@ -3,9 +3,9 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 #[cfg(not(target_arch = "wasm32"))]
 use async_trait::async_trait;
 #[cfg(not(target_arch = "wasm32"))]
-use reqwest_middleware::{Middleware, Next};
+use http::Extensions;
 #[cfg(not(target_arch = "wasm32"))]
-use task_local_extensions::Extensions;
+use reqwest_middleware::{Middleware, Next};
 
 use crate::config::Config;
 
@@ -23,12 +23,12 @@ struct BearerAuthMiddleware {
 impl Middleware for BearerAuthMiddleware {
     async fn handle(
         &self,
-        mut req: reqwest::Request,
+        mut req: reqwest_middleware::reqwest::Request,
         extensions: &mut Extensions,
         next: Next<'_>,
-    ) -> reqwest_middleware::Result<reqwest::Response> {
+    ) -> reqwest_middleware::Result<reqwest_middleware::reqwest::Response> {
         req.headers_mut().insert(
-            reqwest::header::AUTHORIZATION,
+            reqwest_middleware::reqwest::header::AUTHORIZATION,
             format!("Bearer {}", self.token).parse().unwrap(),
         );
         next.run(req, extensions).await
@@ -120,7 +120,7 @@ pub fn make_bearer_client(cfg: &Config) -> Option<ClientWithMiddleware> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let token = cfg.access_token.as_ref()?.clone();
-        let reqwest_client = reqwest::Client::builder()
+        let reqwest_client = reqwest_middleware::reqwest::Client::builder()
             .build()
             .expect("failed to build reqwest client");
         let client = ClientBuilder::new(reqwest_client)

@@ -3,7 +3,7 @@ use anyhow::Result;
 #[cfg(not(target_arch = "wasm32"))]
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 #[cfg(not(target_arch = "wasm32"))]
-use rand::RngCore;
+use rand::RngExt;
 #[cfg(not(target_arch = "wasm32"))]
 use sha2::{Digest, Sha256};
 
@@ -39,7 +39,7 @@ pub fn generate_state() -> Result<String> {
 fn generate_random_string(length: usize) -> Result<String> {
     let byte_len = (length * 3) / 4 + 1;
     let mut bytes = vec![0u8; byte_len];
-    rand::rng().fill_bytes(&mut bytes);
+    rand::rng().fill(&mut bytes[..]);
     let encoded = URL_SAFE_NO_PAD.encode(&bytes);
     Ok(encoded[..length].to_string())
 }
