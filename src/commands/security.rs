@@ -1,6 +1,10 @@
 use anyhow::Result;
+use datadog_api_client::datadogV2::api_application_security::ApplicationSecurityAPI;
 use datadog_api_client::datadogV2::api_entity_risk_scores::{
     EntityRiskScoresAPI, ListEntityRiskScoresOptionalParams,
+};
+use datadog_api_client::datadogV2::api_restriction_policies::{
+    RestrictionPoliciesAPI, UpdateRestrictionPolicyOptionalParams,
 };
 use datadog_api_client::datadogV2::api_security_monitoring::{
     ListFindingsOptionalParams, ListSecurityMonitoringRulesOptionalParams,
@@ -8,6 +12,9 @@ use datadog_api_client::datadogV2::api_security_monitoring::{
     SearchSecurityMonitoringSignalsOptionalParams, SecurityMonitoringAPI,
 };
 use datadog_api_client::datadogV2::model::{
+    ApplicationSecurityWafCustomRuleCreateRequest, ApplicationSecurityWafCustomRuleUpdateRequest,
+    ApplicationSecurityWafExclusionFilterCreateRequest,
+    ApplicationSecurityWafExclusionFilterUpdateRequest, RestrictionPolicyUpdateRequest,
     SecurityMonitoringRuleBulkExportAttributes, SecurityMonitoringRuleBulkExportData,
     SecurityMonitoringRuleBulkExportDataType, SecurityMonitoringRuleBulkExportPayload,
     SecurityMonitoringRuleSort, SecurityMonitoringSignalListRequest,
@@ -309,5 +316,193 @@ pub async fn suppressions_validate(cfg: &Config, file: &str) -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("failed to validate suppression: {e:?}"))?;
     println!("Suppression is valid.");
+    Ok(())
+}
+
+// ---- ASM WAF Custom Rules ----
+
+pub async fn asm_custom_rules_list(cfg: &Config) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ApplicationSecurityAPI::with_client_and_config(dd_cfg, c),
+        None => ApplicationSecurityAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .list_application_security_waf_custom_rules()
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list ASM WAF custom rules: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn asm_custom_rules_get(cfg: &Config, custom_rule_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ApplicationSecurityAPI::with_client_and_config(dd_cfg, c),
+        None => ApplicationSecurityAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .get_application_security_waf_custom_rule(custom_rule_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to get ASM WAF custom rule: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn asm_custom_rules_create(cfg: &Config, file: &str) -> Result<()> {
+    let body: ApplicationSecurityWafCustomRuleCreateRequest = util::read_json_file(file)?;
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ApplicationSecurityAPI::with_client_and_config(dd_cfg, c),
+        None => ApplicationSecurityAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .create_application_security_waf_custom_rule(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to create ASM WAF custom rule: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn asm_custom_rules_update(cfg: &Config, custom_rule_id: &str, file: &str) -> Result<()> {
+    let body: ApplicationSecurityWafCustomRuleUpdateRequest = util::read_json_file(file)?;
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ApplicationSecurityAPI::with_client_and_config(dd_cfg, c),
+        None => ApplicationSecurityAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .update_application_security_waf_custom_rule(custom_rule_id.to_string(), body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update ASM WAF custom rule: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn asm_custom_rules_delete(cfg: &Config, custom_rule_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ApplicationSecurityAPI::with_client_and_config(dd_cfg, c),
+        None => ApplicationSecurityAPI::with_config(dd_cfg),
+    };
+    api.delete_application_security_waf_custom_rule(custom_rule_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete ASM WAF custom rule: {e:?}"))?;
+    println!("ASM WAF custom rule '{custom_rule_id}' deleted.");
+    Ok(())
+}
+
+// ---- ASM WAF Exclusion Filters ----
+
+pub async fn asm_exclusions_list(cfg: &Config) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ApplicationSecurityAPI::with_client_and_config(dd_cfg, c),
+        None => ApplicationSecurityAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .list_application_security_waf_exclusion_filters()
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to list ASM WAF exclusion filters: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn asm_exclusions_get(cfg: &Config, exclusion_filter_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ApplicationSecurityAPI::with_client_and_config(dd_cfg, c),
+        None => ApplicationSecurityAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .get_application_security_waf_exclusion_filter(exclusion_filter_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to get ASM WAF exclusion filter: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn asm_exclusions_create(cfg: &Config, file: &str) -> Result<()> {
+    let body: ApplicationSecurityWafExclusionFilterCreateRequest = util::read_json_file(file)?;
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ApplicationSecurityAPI::with_client_and_config(dd_cfg, c),
+        None => ApplicationSecurityAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .create_application_security_waf_exclusion_filter(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to create ASM WAF exclusion filter: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn asm_exclusions_update(
+    cfg: &Config,
+    exclusion_filter_id: &str,
+    file: &str,
+) -> Result<()> {
+    let body: ApplicationSecurityWafExclusionFilterUpdateRequest = util::read_json_file(file)?;
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ApplicationSecurityAPI::with_client_and_config(dd_cfg, c),
+        None => ApplicationSecurityAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .update_application_security_waf_exclusion_filter(exclusion_filter_id.to_string(), body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update ASM WAF exclusion filter: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn asm_exclusions_delete(cfg: &Config, exclusion_filter_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => ApplicationSecurityAPI::with_client_and_config(dd_cfg, c),
+        None => ApplicationSecurityAPI::with_config(dd_cfg),
+    };
+    api.delete_application_security_waf_exclusion_filter(exclusion_filter_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete ASM WAF exclusion filter: {e:?}"))?;
+    println!("ASM WAF exclusion filter '{exclusion_filter_id}' deleted.");
+    Ok(())
+}
+
+// ---- Restriction Policies ----
+
+pub async fn restriction_policy_get(cfg: &Config, resource_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => RestrictionPoliciesAPI::with_client_and_config(dd_cfg, c),
+        None => RestrictionPoliciesAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .get_restriction_policy(resource_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to get restriction policy: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn restriction_policy_update(cfg: &Config, resource_id: &str, file: &str) -> Result<()> {
+    let body: RestrictionPolicyUpdateRequest = util::read_json_file(file)?;
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => RestrictionPoliciesAPI::with_client_and_config(dd_cfg, c),
+        None => RestrictionPoliciesAPI::with_config(dd_cfg),
+    };
+    let resp = api
+        .update_restriction_policy(
+            resource_id.to_string(),
+            body,
+            UpdateRestrictionPolicyOptionalParams::default(),
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update restriction policy: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn restriction_policy_delete(cfg: &Config, resource_id: &str) -> Result<()> {
+    let dd_cfg = client::make_dd_config(cfg);
+    let api = match client::make_bearer_client(cfg) {
+        Some(c) => RestrictionPoliciesAPI::with_client_and_config(dd_cfg, c),
+        None => RestrictionPoliciesAPI::with_config(dd_cfg),
+    };
+    api.delete_restriction_policy(resource_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete restriction policy: {e:?}"))?;
+    println!("Restriction policy for '{resource_id}' deleted.");
     Ok(())
 }

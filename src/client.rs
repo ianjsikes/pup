@@ -138,7 +138,7 @@ pub fn make_bearer_client(cfg: &Config) -> Option<ClientWithMiddleware> {
 
 /// All 85 unstable operations (snake_case for the Rust DD client).
 static UNSTABLE_OPS: &[&str] = &[
-    // Incidents (16)
+    // Incidents (26)
     "v2.list_incidents",
     "v2.search_incidents",
     "v2.get_incident",
@@ -156,6 +156,18 @@ static UNSTABLE_OPS: &[&str] = &[
     "v2.get_incident_postmortem_template",
     "v2.list_incident_postmortem_templates",
     "v2.update_incident_postmortem_template",
+    // Incident Teams (5)
+    "v2.create_incident_team",
+    "v2.delete_incident_team",
+    "v2.get_incident_team",
+    "v2.list_incident_teams",
+    "v2.update_incident_team",
+    // Incident Services (5)
+    "v2.create_incident_service",
+    "v2.delete_incident_service",
+    "v2.get_incident_service",
+    "v2.list_incident_services",
+    "v2.update_incident_service",
     // Fleet Automation (14)
     "v2.list_fleet_agents",
     "v2.get_fleet_agent_info",
@@ -885,7 +897,7 @@ mod tests {
 
     #[test]
     fn test_unstable_ops_count() {
-        assert_eq!(UNSTABLE_OPS.len(), 94);
+        assert_eq!(UNSTABLE_OPS.len(), 104);
     }
 
     #[test]
