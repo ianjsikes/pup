@@ -252,6 +252,16 @@ static UNSTABLE_OPS: &[&str] = &[
     "v2.delete_llm_obs_experiments",
     "v2.create_llm_obs_dataset",
     "v2.list_llm_obs_datasets",
+    // Logs Restriction Queries (9)
+    "v2.list_restriction_queries",
+    "v2.get_restriction_query",
+    "v2.create_restriction_query",
+    "v2.update_restriction_query",
+    "v2.delete_restriction_query",
+    "v2.list_restriction_query_roles",
+    "v2.add_role_to_restriction_query",
+    "v2.remove_role_from_restriction_query",
+    "v2.get_role_restriction_query",
 ];
 
 // ---------------------------------------------------------------------------
@@ -887,7 +897,7 @@ mod tests {
 
     #[test]
     fn test_unstable_ops_count() {
-        assert_eq!(UNSTABLE_OPS.len(), 95);
+        assert_eq!(UNSTABLE_OPS.len(), 104);
     }
 
     #[test]

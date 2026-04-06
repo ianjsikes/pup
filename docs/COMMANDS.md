@@ -44,7 +44,9 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | infrastructure | hosts (list, get) | src/commands/infrastructure.rs | ✅ |
 | synthetics | tests, locations, suites | src/commands/synthetics.rs | ✅ |
 | symdb | search | src/commands/symdb.rs | ✅ |
-| users | list, get, roles | src/commands/users.rs | ✅ |
+| logs-restriction | list, get, create, update, delete, roles (list, add) | src/commands/logs_restriction.rs | ✅ |
+| processes | list | src/commands/processes.rs | ✅ |
+| users | list, get, roles, service-accounts (create, app-keys CRUD) | src/commands/users.rs | ✅ |
 | notebooks | list, get, delete | src/commands/notebooks.rs | ✅ |
 | security | rules, signals, findings, content-packs, risk-scores | src/commands/security.rs | ✅ |
 | organizations | get, list | src/commands/organizations.rs | ✅ |

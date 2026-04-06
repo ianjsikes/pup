@@ -1530,6 +1530,33 @@ enum Commands {
         #[command(subcommand)]
         action: LogActions,
     },
+    /// Manage log restriction queries for role-based access control
+    ///
+    /// Restriction queries limit which log data users can read based on their roles.
+    /// Use this command to manage the full lifecycle of restriction queries.
+    ///
+    /// CAPABILITIES:
+    ///   • List all restriction queries
+    ///   • Get a specific restriction query
+    ///   • Create, update, and delete restriction queries
+    ///   • List and add roles to restriction queries
+    ///
+    /// EXAMPLES:
+    ///   pup logs-restriction list
+    ///   pup logs-restriction get <query-id>
+    ///   pup logs-restriction create --file query.json
+    ///   pup logs-restriction update <query-id> --file query.json
+    ///   pup logs-restriction delete <query-id>
+    ///   pup logs-restriction roles list <query-id>
+    ///   pup logs-restriction roles add <query-id> --file role.json
+    ///
+    /// AUTHENTICATION:
+    ///   Requires either OAuth2 authentication or API keys.
+    #[command(name = "logs-restriction", verbatim_doc_comment)]
+    LogsRestriction {
+        #[command(subcommand)]
+        action: LogsRestrictionActions,
+    },
     /// Query and manage metrics
     ///
     /// Query time-series metrics, list available metrics, and manage metric metadata.
@@ -1821,6 +1848,27 @@ enum Commands {
     Organizations {
         #[command(subcommand)]
         action: OrgActions,
+    },
+    /// List and search running processes
+    ///
+    /// Query the Datadog Processes API to list and search running processes
+    /// across your infrastructure.
+    ///
+    /// CAPABILITIES:
+    ///   • List all running processes with optional search and tag filters
+    ///   • Paginate results with page size control
+    ///
+    /// EXAMPLES:
+    ///   pup processes list
+    ///   pup processes list --search "nginx"
+    ///   pup processes list --tags "env:prod" --page-limit 50
+    ///
+    /// AUTHENTICATION:
+    ///   Requires either OAuth2 authentication or API keys.
+    #[command(verbatim_doc_comment)]
+    Processes {
+        #[command(subcommand)]
+        action: ProcessesActions,
     },
     /// Send product analytics events
     ///
@@ -3590,12 +3638,115 @@ enum UserActions {
         #[command(subcommand)]
         action: SeatsActions,
     },
+    /// Manage service accounts
+    #[command(name = "service-accounts")]
+    ServiceAccounts {
+        #[command(subcommand)]
+        action: ServiceAccountActions,
+    },
 }
 
 #[derive(Subcommand)]
 enum UserRoleActions {
     /// List roles
     List,
+}
+
+#[derive(Subcommand)]
+enum ServiceAccountActions {
+    /// Create a service account from a JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Manage application keys for a service account
+    #[command(name = "app-keys")]
+    AppKeys {
+        #[command(subcommand)]
+        action: ServiceAccountAppKeyActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum ServiceAccountAppKeyActions {
+    /// List application keys for a service account
+    List { service_account_id: String },
+    /// Get an application key for a service account
+    Get {
+        service_account_id: String,
+        app_key_id: String,
+    },
+    /// Create an application key for a service account
+    Create {
+        service_account_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Update an application key for a service account
+    Update {
+        service_account_id: String,
+        app_key_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete an application key from a service account
+    Delete {
+        service_account_id: String,
+        app_key_id: String,
+    },
+}
+
+// ---- Processes ----
+#[derive(Subcommand)]
+enum ProcessesActions {
+    /// List running processes
+    List {
+        #[arg(long, help = "Search processes by name or command")]
+        search: Option<String>,
+        #[arg(long, help = "Comma-separated list of tags to filter by")]
+        tags: Option<String>,
+        #[arg(long, help = "Maximum number of results per page")]
+        page_limit: Option<i32>,
+    },
+}
+
+// ---- LogsRestriction ----
+#[derive(Subcommand)]
+enum LogsRestrictionActions {
+    /// List all restriction queries
+    List,
+    /// Get a restriction query by ID
+    Get { query_id: String },
+    /// Create a restriction query from a JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a restriction query from a JSON file
+    Update {
+        query_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete a restriction query
+    Delete { query_id: String },
+    /// Manage roles for a restriction query
+    Roles {
+        #[command(subcommand)]
+        action: LogsRestrictionRoleActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum LogsRestrictionRoleActions {
+    /// List roles for a restriction query
+    List { query_id: String },
+    /// Add a role to a restriction query from a JSON file
+    Add {
+        query_id: String,
+        #[arg(long)]
+        file: String,
+    },
 }
 
 // ---- Widgets ----
@@ -8893,6 +9044,66 @@ async fn main_inner() -> anyhow::Result<()> {
                         }
                     },
                 },
+                UserActions::ServiceAccounts { action } => match action {
+                    ServiceAccountActions::Create { file } => {
+                        commands::users::service_accounts_create(&cfg, &file).await?;
+                    }
+                    ServiceAccountActions::AppKeys { action } => match action {
+                        ServiceAccountAppKeyActions::List { service_account_id } => {
+                            commands::users::service_account_app_keys_list(
+                                &cfg,
+                                &service_account_id,
+                            )
+                            .await?;
+                        }
+                        ServiceAccountAppKeyActions::Get {
+                            service_account_id,
+                            app_key_id,
+                        } => {
+                            commands::users::service_account_app_keys_get(
+                                &cfg,
+                                &service_account_id,
+                                &app_key_id,
+                            )
+                            .await?;
+                        }
+                        ServiceAccountAppKeyActions::Create {
+                            service_account_id,
+                            file,
+                        } => {
+                            commands::users::service_account_app_keys_create(
+                                &cfg,
+                                &service_account_id,
+                                &file,
+                            )
+                            .await?;
+                        }
+                        ServiceAccountAppKeyActions::Update {
+                            service_account_id,
+                            app_key_id,
+                            file,
+                        } => {
+                            commands::users::service_account_app_keys_update(
+                                &cfg,
+                                &service_account_id,
+                                &app_key_id,
+                                &file,
+                            )
+                            .await?;
+                        }
+                        ServiceAccountAppKeyActions::Delete {
+                            service_account_id,
+                            app_key_id,
+                        } => {
+                            commands::users::service_account_app_keys_delete(
+                                &cfg,
+                                &service_account_id,
+                                &app_key_id,
+                            )
+                            .await?;
+                        }
+                    },
+                },
             }
         }
         // --- Infrastructure ---
@@ -11163,6 +11374,48 @@ async fn main_inner() -> anyhow::Result<()> {
             }
         }
         Commands::Version => println!("{}", version::build_info()),
+        // --- Processes ---
+        Commands::Processes { action } => {
+            cfg.validate_auth()?;
+            match action {
+                ProcessesActions::List {
+                    search,
+                    tags,
+                    page_limit,
+                } => {
+                    commands::processes::list(&cfg, search, tags, page_limit).await?;
+                }
+            }
+        }
+        // --- LogsRestriction ---
+        Commands::LogsRestriction { action } => {
+            cfg.validate_auth()?;
+            match action {
+                LogsRestrictionActions::List => {
+                    commands::logs_restriction::list(&cfg).await?;
+                }
+                LogsRestrictionActions::Get { query_id } => {
+                    commands::logs_restriction::get(&cfg, &query_id).await?;
+                }
+                LogsRestrictionActions::Create { file } => {
+                    commands::logs_restriction::create(&cfg, &file).await?;
+                }
+                LogsRestrictionActions::Update { query_id, file } => {
+                    commands::logs_restriction::update(&cfg, &query_id, &file).await?;
+                }
+                LogsRestrictionActions::Delete { query_id } => {
+                    commands::logs_restriction::delete(&cfg, &query_id).await?;
+                }
+                LogsRestrictionActions::Roles { action } => match action {
+                    LogsRestrictionRoleActions::List { query_id } => {
+                        commands::logs_restriction::roles_list(&cfg, &query_id).await?;
+                    }
+                    LogsRestrictionRoleActions::Add { query_id, file } => {
+                        commands::logs_restriction::roles_add(&cfg, &query_id, &file).await?;
+                    }
+                },
+            }
+        }
         // --- Agentless Scanning ---
         Commands::AgentlessScanning { action } => {
             cfg.validate_auth()?;
