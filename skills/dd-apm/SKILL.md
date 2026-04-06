@@ -162,6 +162,31 @@ pup slos create --file slo.json
 | Error rate by service | `pup traces aggregate --query="status:error" --compute="count" --group-by="service" --from="1h"` |
 | Throughput | `pup traces aggregate --query="service:api" --compute="count" --group-by="resource_name" --from="1h"` |
 
+## Service Library Config
+
+Query the APM tracer configuration deployed across all running instances of a service.
+Useful for auditing config drift — finding instances where tracing, profiling, or AppSec
+is misconfigured relative to the rest of the fleet.
+
+```bash
+# Get tracer config for a service
+pup apm service-library-config get --service-name my-service
+
+# Filter by environment
+pup apm service-library-config get --service-name my-service --env prod
+
+# Filter by language
+pup apm service-library-config get --service-name my-service --env prod --language python
+
+# Only show configs where instances disagree (config drift)
+pup apm service-library-config get --service-name my-service --mixed
+```
+
+> **Note on service identity:** `service_name`, `env`, and `language_name` come from the
+> SDK telemetry pipeline and reflect what the tracer reports at runtime. These may differ
+> from values in the Service Catalog, which aggregates data from multiple sources (APM
+> spans, USM, infrastructure tags, manual definitions).
+
 ## Troubleshooting
 
 | Problem | Fix |

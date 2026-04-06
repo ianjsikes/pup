@@ -6698,7 +6698,12 @@ enum ApmTroubleshootingActions {
 
 #[derive(Subcommand)]
 enum ApmServiceLibraryConfigActions {
-    /// Get library configuration for a service
+    /// Get library configuration for a service.
+    ///
+    /// Note: service_name, env, and language_name reflect what the SDK telemetry
+    /// pipeline reports at runtime and may differ from values in the Service Catalog,
+    /// which aggregates data from multiple sources (APM spans, USM, infrastructure
+    /// tags, manual definitions).
     Get {
         #[arg(long, help = "Service name (required)")]
         service_name: String,
