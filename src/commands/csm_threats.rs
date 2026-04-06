@@ -11,10 +11,7 @@ use crate::util;
 
 pub async fn agent_policies_list(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => CSMThreatsAPI::with_client_and_config(dd_cfg, c),
-        None => CSMThreatsAPI::with_config(dd_cfg),
-    };
+    let api = CSMThreatsAPI::with_config(dd_cfg);
     let resp = api
         .list_csm_threats_agent_policies()
         .await
@@ -24,10 +21,7 @@ pub async fn agent_policies_list(cfg: &Config) -> Result<()> {
 
 pub async fn agent_policies_get(cfg: &Config, policy_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => CSMThreatsAPI::with_client_and_config(dd_cfg, c),
-        None => CSMThreatsAPI::with_config(dd_cfg),
-    };
+    let api = CSMThreatsAPI::with_config(dd_cfg);
     let resp = api
         .get_csm_threats_agent_policy(policy_id.to_string())
         .await
@@ -37,10 +31,7 @@ pub async fn agent_policies_get(cfg: &Config, policy_id: &str) -> Result<()> {
 
 pub async fn agent_policies_create(cfg: &Config, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => CSMThreatsAPI::with_client_and_config(dd_cfg, c),
-        None => CSMThreatsAPI::with_config(dd_cfg),
-    };
+    let api = CSMThreatsAPI::with_config(dd_cfg);
     let body = util::read_json_file(file)?;
     let resp = api
         .create_csm_threats_agent_policy(body)
@@ -51,10 +42,7 @@ pub async fn agent_policies_create(cfg: &Config, file: &str) -> Result<()> {
 
 pub async fn agent_policies_update(cfg: &Config, policy_id: &str, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => CSMThreatsAPI::with_client_and_config(dd_cfg, c),
-        None => CSMThreatsAPI::with_config(dd_cfg),
-    };
+    let api = CSMThreatsAPI::with_config(dd_cfg);
     let body = util::read_json_file(file)?;
     let resp = api
         .update_csm_threats_agent_policy(policy_id.to_string(), body)
@@ -65,10 +53,7 @@ pub async fn agent_policies_update(cfg: &Config, policy_id: &str, file: &str) ->
 
 pub async fn agent_policies_delete(cfg: &Config, policy_id: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => CSMThreatsAPI::with_client_and_config(dd_cfg, c),
-        None => CSMThreatsAPI::with_config(dd_cfg),
-    };
+    let api = CSMThreatsAPI::with_config(dd_cfg);
     api.delete_csm_threats_agent_policy(policy_id.to_string())
         .await
         .map_err(|e| anyhow::anyhow!("failed to delete CSM threats agent policy: {e:?}"))?;
@@ -78,10 +63,7 @@ pub async fn agent_policies_delete(cfg: &Config, policy_id: &str) -> Result<()> 
 
 pub async fn agent_rules_list(cfg: &Config, policy_id: Option<String>) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => CSMThreatsAPI::with_client_and_config(dd_cfg, c),
-        None => CSMThreatsAPI::with_config(dd_cfg),
-    };
+    let api = CSMThreatsAPI::with_config(dd_cfg);
     let mut params = ListCSMThreatsAgentRulesOptionalParams::default();
     if let Some(pid) = policy_id {
         params = params.policy_id(pid);
@@ -95,10 +77,7 @@ pub async fn agent_rules_list(cfg: &Config, policy_id: Option<String>) -> Result
 
 pub async fn agent_rules_get(cfg: &Config, rule_id: &str, policy_id: Option<String>) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => CSMThreatsAPI::with_client_and_config(dd_cfg, c),
-        None => CSMThreatsAPI::with_config(dd_cfg),
-    };
+    let api = CSMThreatsAPI::with_config(dd_cfg);
     let mut params = GetCSMThreatsAgentRuleOptionalParams::default();
     if let Some(pid) = policy_id {
         params = params.policy_id(pid);
@@ -112,10 +91,7 @@ pub async fn agent_rules_get(cfg: &Config, rule_id: &str, policy_id: Option<Stri
 
 pub async fn agent_rules_create(cfg: &Config, file: &str) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => CSMThreatsAPI::with_client_and_config(dd_cfg, c),
-        None => CSMThreatsAPI::with_config(dd_cfg),
-    };
+    let api = CSMThreatsAPI::with_config(dd_cfg);
     let body = util::read_json_file(file)?;
     let resp = api
         .create_csm_threats_agent_rule(body)
@@ -131,10 +107,7 @@ pub async fn agent_rules_update(
     policy_id: Option<String>,
 ) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => CSMThreatsAPI::with_client_and_config(dd_cfg, c),
-        None => CSMThreatsAPI::with_config(dd_cfg),
-    };
+    let api = CSMThreatsAPI::with_config(dd_cfg);
     let body = util::read_json_file(file)?;
     let mut params = UpdateCSMThreatsAgentRuleOptionalParams::default();
     if let Some(pid) = policy_id {
@@ -153,10 +126,7 @@ pub async fn agent_rules_delete(
     policy_id: Option<String>,
 ) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => CSMThreatsAPI::with_client_and_config(dd_cfg, c),
-        None => CSMThreatsAPI::with_config(dd_cfg),
-    };
+    let api = CSMThreatsAPI::with_config(dd_cfg);
     let mut params = DeleteCSMThreatsAgentRuleOptionalParams::default();
     if let Some(pid) = policy_id {
         params = params.policy_id(pid);
@@ -170,10 +140,7 @@ pub async fn agent_rules_delete(
 
 pub async fn policy_download(cfg: &Config) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
-    let api = match client::make_bearer_client(cfg) {
-        Some(c) => CSMThreatsAPI::with_client_and_config(dd_cfg, c),
-        None => CSMThreatsAPI::with_config(dd_cfg),
-    };
+    let api = CSMThreatsAPI::with_config(dd_cfg);
     let bytes = api
         .download_csm_threats_policy()
         .await
