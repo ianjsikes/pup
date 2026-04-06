@@ -1,6 +1,6 @@
 # Command Reference
 
-Complete reference for all 56 command groups in Pup.
+Complete reference for all 58 command groups in Pup.
 
 ## Command Pattern
 
@@ -23,7 +23,7 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | auth | login, logout, status, refresh | src/commands/auth.rs | ✅ |
 | metrics | query, list, get, search | src/commands/metrics.rs | ✅ |
 | logs | search, list, aggregate | src/commands/logs.rs | ✅ |
-| traces | - | - | ❌ |
+| traces | metrics (list, get, create, update, delete) | src/commands/traces.rs | ✅ |
 | monitors | list, get, delete, search | src/commands/monitors.rs | ✅ |
 | dashboards | list, get, delete, url | src/commands/dashboards.rs | ✅ |
 | dbm | samples (search) | src/commands/dbm.rs | ✅ |
@@ -59,6 +59,8 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | containers | list, images (list) | src/commands/containers.rs | ✅ |
 | cost | projected, attribution, by-org, aws-config (list, get, create, delete), azure-config (list, get, create, delete), gcp-config (list, get, create, delete) | src/commands/cost.rs | ✅ |
 | product-analytics | events send | src/commands/product_analytics.rs | ✅ |
+| datasets | list, get, create, update, delete | src/commands/datasets.rs | ✅ |
+| data-deletion | requests (list, create, cancel) | src/commands/data_deletion.rs | ✅ |
 | data-governance | scanner-rules (list) | src/commands/data_governance.rs | ✅ |
 | obs-pipelines | list, get, create, update, delete, validate | src/commands/obs_pipelines.rs | ✅ |
 | llm-obs | projects (create, list), experiments (create, list, update, delete, summary, events (list, get), metric-values, dimension-values), datasets (create, list), spans (search) | src/commands/llm_obs.rs | ✅ |
@@ -74,12 +76,12 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | fleet | agents (list, get, versions), deployments (list, get, configure, upgrade, cancel), schedules (list, get, create, update, delete, trigger) | src/commands/fleet.rs | ✅ |
 | skills | list, install, path | src/commands/skills.rs | ✅ |
 | runbooks | list, describe, run, import, validate | src/commands/runbooks.rs | ✅ |
-| workflows | get, create, update, delete, run, instances (list, get, cancel) | src/commands/workflows.rs | ✅ |
+| workflows | get, create, update, delete, run, instances (list, get, cancel), connections (get, create, update, delete) | src/commands/workflows.rs | ✅ |
 | investigations | list, get, trigger | src/commands/investigations.rs | ✅ |
 | change-requests | create, get, update, create-branch, decisions (update, delete) | src/commands/change_management.rs | ✅ |
 | app-builder | list, get, create, update, delete, delete-batch, publish, unpublish | src/commands/app_builder.rs | ✅ |
 
-**Summary:** 56 working, 0 API-blocked, 0 placeholders
+**Summary:** 58 working, 0 API-blocked, 0 placeholders
 
 **Note:** RUM command is fully operational. Apps and sessions work completely. Metrics and retention-filters support list/get operations (create/update/delete operations pending due to complex API type structures).
 
@@ -133,7 +135,7 @@ pup infrastructure hosts list
 - **metrics** - Time-series metrics (query, list, get, search)
 - **logs** - Log search and analysis (search, list, aggregate)
 - **dbm** - Database Monitoring query samples (samples search)
-- **traces** - APM traces (not yet implemented - use `apm` commands instead)
+- **traces** - APM spans metrics (list, get, create, update, delete)
 - **rum** - Real User Monitoring (apps, metrics, retention-filters, sessions)
 - **events** - Infrastructure events (list, search, get)
 - **ddsql** - DDSQL queries (table, csv, time-series)
@@ -179,7 +181,7 @@ pup infrastructure hosts list
 - **hamr** - High Availability Multi-Region connections
 - **fleet** - Fleet Automation (agents, deployments, schedules)
 - **runbooks** - Local runbook execution engine (list, describe, run, import, validate)
-- **workflows** - Workflow Automation (get, create, update, delete, run, instances)
+- **workflows** - Workflow Automation (get, create, update, delete, run, instances, connections)
 - **investigations** - Bits AI SRE investigations (list, get, trigger)
 - **change-requests** - Change request management (create, get, update, create-branch, decisions)
 

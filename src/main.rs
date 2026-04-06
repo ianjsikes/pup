@@ -895,6 +895,24 @@ enum Commands {
         #[command(subcommand)]
         action: DashboardActions,
     },
+    /// Manage data deletion requests
+    ///
+    /// Create, list, and cancel data deletion requests for Logs and RUM.
+    ///
+    /// COMMANDS:
+    ///   requests list    List deletion requests
+    ///   requests create  Create a deletion request from JSON
+    ///   requests cancel  Cancel a deletion request
+    ///
+    /// EXAMPLES:
+    ///   pup data-deletion requests list
+    ///   pup data-deletion requests create --product logs --file request.json
+    ///   pup data-deletion requests cancel <request-id>
+    #[command(name = "data-deletion", verbatim_doc_comment)]
+    DataDeletion {
+        #[command(subcommand)]
+        action: DataDeletionActions,
+    },
     /// Manage data governance
     ///
     /// Manage data governance, sensitive data scanning, and data deletion.
@@ -918,6 +936,26 @@ enum Commands {
     DataGovernance {
         #[command(subcommand)]
         action: DataGovActions,
+    },
+    /// Manage datasets
+    ///
+    /// Create, list, get, update, and delete Restricted Datasets for data access control.
+    ///
+    /// COMMANDS:
+    ///   list              List all datasets
+    ///   get <id>          Get a dataset by ID
+    ///   create --file     Create a dataset from JSON
+    ///   update <id> -f    Update a dataset
+    ///   delete <id>       Delete a dataset
+    ///
+    /// EXAMPLES:
+    ///   pup datasets list
+    ///   pup datasets get my-dataset-id
+    ///   pup datasets create --file dataset.json
+    #[command(verbatim_doc_comment)]
+    Datasets {
+        #[command(subcommand)]
+        action: DatasetsActions,
     },
     /// Search Database Monitoring query samples
     ///
@@ -3854,6 +3892,30 @@ enum WorkflowActions {
         #[command(subcommand)]
         action: WorkflowInstanceActions,
     },
+    /// Manage action connections
+    Connections {
+        #[command(subcommand)]
+        action: WorkflowConnectionActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum WorkflowConnectionActions {
+    /// Get an action connection by ID
+    Get { connection_id: String },
+    /// Create an action connection from a JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Update an action connection from a JSON file
+    Update {
+        connection_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete an action connection
+    Delete { connection_id: String },
 }
 
 #[derive(Subcommand)]
@@ -5769,6 +5831,60 @@ enum FleetScheduleActions {
     Trigger { schedule_id: String },
 }
 
+// ---- Data Deletion ----
+#[derive(Subcommand)]
+enum DataDeletionActions {
+    /// Manage deletion requests
+    Requests {
+        #[command(subcommand)]
+        action: DataDeletionRequestActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum DataDeletionRequestActions {
+    /// List data deletion requests
+    List {
+        #[arg(long, help = "Filter by product (e.g., logs, rum)")]
+        product: Option<String>,
+        #[arg(long, help = "Filter by query")]
+        query: Option<String>,
+        #[arg(long, help = "Filter by status")]
+        status: Option<String>,
+    },
+    /// Create a data deletion request from a JSON file
+    Create {
+        #[arg(long, help = "Product to target (e.g., logs, rum)")]
+        product: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Cancel a data deletion request
+    Cancel { request_id: String },
+}
+
+// ---- Datasets ----
+#[derive(Subcommand)]
+enum DatasetsActions {
+    /// List all datasets
+    List,
+    /// Get a dataset by ID
+    Get { dataset_id: String },
+    /// Create a dataset from a JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a dataset from a JSON file
+    Update {
+        dataset_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete a dataset
+    Delete { dataset_id: String },
+}
+
 // ---- Data Governance ----
 #[derive(Subcommand)]
 enum DataGovActions {
@@ -7138,6 +7254,32 @@ enum TracesActions {
         )]
         group_by: Option<String>,
     },
+    /// Manage span-based metrics
+    Metrics {
+        #[command(subcommand)]
+        action: SpansMetricsActions,
+    },
+}
+
+#[derive(Subcommand)]
+enum SpansMetricsActions {
+    /// List all span-based metrics
+    List,
+    /// Get a span-based metric by ID
+    Get { metric_id: String },
+    /// Create a span-based metric from a JSON file
+    Create {
+        #[arg(long)]
+        file: String,
+    },
+    /// Update a span-based metric from a JSON file
+    Update {
+        metric_id: String,
+        #[arg(long)]
+        file: String,
+    },
+    /// Delete a span-based metric
+    Delete { metric_id: String },
 }
 
 // ---- ACP ----
@@ -10145,6 +10287,49 @@ async fn main_inner() -> anyhow::Result<()> {
                 },
             }
         }
+        // --- Data Deletion ---
+        Commands::DataDeletion { action } => {
+            cfg.validate_auth()?;
+            match action {
+                DataDeletionActions::Requests { action } => match action {
+                    DataDeletionRequestActions::List {
+                        product,
+                        query,
+                        status,
+                    } => {
+                        commands::data_deletion::requests_list(&cfg, product, query, status)
+                            .await?;
+                    }
+                    DataDeletionRequestActions::Create { product, file } => {
+                        commands::data_deletion::requests_create(&cfg, &product, &file).await?;
+                    }
+                    DataDeletionRequestActions::Cancel { request_id } => {
+                        commands::data_deletion::requests_cancel(&cfg, &request_id).await?;
+                    }
+                },
+            }
+        }
+        // --- Datasets ---
+        Commands::Datasets { action } => {
+            cfg.validate_auth()?;
+            match action {
+                DatasetsActions::List => {
+                    commands::datasets::list(&cfg).await?;
+                }
+                DatasetsActions::Get { dataset_id } => {
+                    commands::datasets::get(&cfg, &dataset_id).await?;
+                }
+                DatasetsActions::Create { file } => {
+                    commands::datasets::create(&cfg, &file).await?;
+                }
+                DatasetsActions::Update { dataset_id, file } => {
+                    commands::datasets::update(&cfg, &dataset_id, &file).await?;
+                }
+                DatasetsActions::Delete { dataset_id } => {
+                    commands::datasets::delete(&cfg, &dataset_id).await?;
+                }
+            }
+        }
         // --- Deployment Gates ---
         Commands::DeploymentGates { action } => {
             cfg.validate_auth()?;
@@ -10960,6 +11145,23 @@ async fn main_inner() -> anyhow::Result<()> {
                 } => {
                     commands::traces::aggregate(&cfg, query, from, to, compute, group_by).await?;
                 }
+                TracesActions::Metrics { action } => match action {
+                    SpansMetricsActions::List => {
+                        commands::traces::metrics_list(&cfg).await?;
+                    }
+                    SpansMetricsActions::Get { metric_id } => {
+                        commands::traces::metrics_get(&cfg, &metric_id).await?;
+                    }
+                    SpansMetricsActions::Create { file } => {
+                        commands::traces::metrics_create(&cfg, &file).await?;
+                    }
+                    SpansMetricsActions::Update { metric_id, file } => {
+                        commands::traces::metrics_update(&cfg, &metric_id, &file).await?;
+                    }
+                    SpansMetricsActions::Delete { metric_id } => {
+                        commands::traces::metrics_delete(&cfg, &metric_id).await?;
+                    }
+                },
             }
         }
         // --- ACP ---
@@ -11168,6 +11370,24 @@ async fn main_inner() -> anyhow::Result<()> {
                     } => {
                         commands::workflows::instance_cancel(&cfg, &workflow_id, &instance_id)
                             .await?;
+                    }
+                },
+                WorkflowActions::Connections { action } => match action {
+                    WorkflowConnectionActions::Get { connection_id } => {
+                        commands::workflows::connections_get(&cfg, &connection_id).await?;
+                    }
+                    WorkflowConnectionActions::Create { file } => {
+                        commands::workflows::connections_create(&cfg, &file).await?;
+                    }
+                    WorkflowConnectionActions::Update {
+                        connection_id,
+                        file,
+                    } => {
+                        commands::workflows::connections_update(&cfg, &connection_id, &file)
+                            .await?;
+                    }
+                    WorkflowConnectionActions::Delete { connection_id } => {
+                        commands::workflows::connections_delete(&cfg, &connection_id).await?;
                     }
                 },
             }

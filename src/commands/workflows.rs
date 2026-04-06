@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::collections::BTreeMap;
 
+use datadog_api_client::datadogV2::api_action_connection::ActionConnectionAPI;
 use datadog_api_client::datadogV2::api_workflow_automation::{
     ListWorkflowInstancesOptionalParams, WorkflowAutomationAPI,
 };
@@ -208,4 +209,53 @@ pub async fn instance_cancel(cfg: &Config, workflow_id: &str, instance_id: &str)
         .await
         .map_err(|e| anyhow::anyhow!("failed to cancel workflow instance: {:?}", e))?;
     formatter::output(cfg, &resp)
+}
+
+// ---------------------------------------------------------------------------
+// Action Connections
+// ---------------------------------------------------------------------------
+
+fn make_connection_api(cfg: &Config) -> ActionConnectionAPI {
+    let dd_cfg = client::make_dd_config(cfg);
+    ActionConnectionAPI::with_config(dd_cfg)
+}
+
+pub async fn connections_get(cfg: &Config, connection_id: &str) -> Result<()> {
+    let api = make_connection_api(cfg);
+    let resp = api
+        .get_action_connection(connection_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to get action connection: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn connections_create(cfg: &Config, file: &str) -> Result<()> {
+    let body: datadog_api_client::datadogV2::model::CreateActionConnectionRequest =
+        util::read_json_file(file)?;
+    let api = make_connection_api(cfg);
+    let resp = api
+        .create_action_connection(body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to create action connection: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn connections_update(cfg: &Config, connection_id: &str, file: &str) -> Result<()> {
+    let body: datadog_api_client::datadogV2::model::UpdateActionConnectionRequest =
+        util::read_json_file(file)?;
+    let api = make_connection_api(cfg);
+    let resp = api
+        .update_action_connection(connection_id.to_string(), body)
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to update action connection: {e:?}"))?;
+    formatter::output(cfg, &resp)
+}
+
+pub async fn connections_delete(cfg: &Config, connection_id: &str) -> Result<()> {
+    let api = make_connection_api(cfg);
+    api.delete_action_connection(connection_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to delete action connection: {e:?}"))?;
+    eprintln!("Action connection {connection_id} deleted.");
+    Ok(())
 }
