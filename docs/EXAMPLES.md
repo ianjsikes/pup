@@ -309,6 +309,37 @@ pup security findings search \
   --query="@severity:high"
 ```
 
+## APM Service Config
+
+### Get Service Instance Configuration
+```bash
+# Get service instance metadata (IDs, hostnames, config IDs)
+pup apm service-config get --service-name my-service
+
+# Filter by environment
+pup apm service-config get --service-name my-service --env prod
+
+# Filter by specific instance IDs
+pup apm service-config get --service-name my-service --service-instance-ids "id-1,id-2"
+```
+
+## APM Service Library Config
+
+### Get Service Library Configuration
+```bash
+# Get tracer configuration for a service across all instances
+pup apm service-library-config get --service-name my-service
+
+# Filter by environment
+pup apm service-library-config get --service-name my-service --env prod
+
+# Filter by language
+pup apm service-library-config get --service-name my-service --env prod --language python
+
+# Only show configs where instances disagree (useful for finding config drift)
+pup apm service-library-config get --service-name my-service --mixed
+```
+
 ## APM Troubleshooting
 
 ### List Instrumentation Errors for a Host
