@@ -68,9 +68,11 @@ fn build_advanced_table_request(
 /// Returns `Ok(Some(query_id))` if the query is still running,
 /// `Ok(None)` if the query is done, or an error if the status is unexpected.
 fn extract_query_status(resp: &Value) -> Result<Option<String>> {
+    // API returns meta.responses[0].queries[0] (new shape) or meta.queries[0] (old shape).
     let query_meta = resp
-        .pointer("/meta/queries/0")
-        .ok_or_else(|| anyhow!("unexpected response: missing meta.queries[0]"))?;
+        .pointer("/meta/responses/0/queries/0")
+        .or_else(|| resp.pointer("/meta/queries/0"))
+        .ok_or_else(|| anyhow!("unexpected response: missing query status in meta"))?;
 
     let status = query_meta
         .get("status")
@@ -309,6 +311,7 @@ mod tests {
 
     #[test]
     fn test_extract_query_status_done() {
+        // Old shape (fallback).
         let resp: Value =
             serde_json::from_str(r#"{"meta":{"queries":[{"status":"done","name":"user_query"}]}}"#)
                 .unwrap();
@@ -316,7 +319,18 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_query_status_done_new_shape() {
+        // New shape: meta.responses[0].queries[0].
+        let resp: Value = serde_json::from_str(
+            r#"{"meta":{"responses":[{"queries":[{"status":"done","name":"user_query"}]}]}}"#,
+        )
+        .unwrap();
+        assert!(extract_query_status(&resp).unwrap().is_none());
+    }
+
+    #[test]
     fn test_extract_query_status_running() {
+        // Old shape (fallback).
         let resp: Value = serde_json::from_str(
             r#"{"meta":{"queries":[{"status":"running","name":"user_query","query_id":"abc-123"}]}}"#,
         )
@@ -324,6 +338,19 @@ mod tests {
         assert_eq!(
             extract_query_status(&resp).unwrap(),
             Some("abc-123".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_query_status_running_new_shape() {
+        // New shape: meta.responses[0].queries[0].
+        let resp: Value = serde_json::from_str(
+            r#"{"meta":{"responses":[{"queries":[{"status":"running","name":"user_query","query_id":"xyz-789"}]}]}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            extract_query_status(&resp).unwrap(),
+            Some("xyz-789".to_string())
         );
     }
 
