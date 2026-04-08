@@ -11920,8 +11920,7 @@ async fn main_inner() -> anyhow::Result<()> {
                         commands::csm_threats::backend_rules_create(&cfg, &file).await?;
                     }
                     CsmThreatsBackendRuleActions::Update { rule_id, file } => {
-                        commands::csm_threats::backend_rules_update(&cfg, &rule_id, &file)
-                            .await?;
+                        commands::csm_threats::backend_rules_update(&cfg, &rule_id, &file).await?;
                     }
                     CsmThreatsBackendRuleActions::Delete { rule_id } => {
                         commands::csm_threats::backend_rules_delete(&cfg, &rule_id).await?;

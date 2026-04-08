@@ -4439,10 +4439,7 @@ async fn test_csm_threats_backend_rules_list_error() {
         .create_async()
         .await;
     let result = crate::commands::csm_threats::backend_rules_list(&cfg, None).await;
-    assert!(
-        result.is_err(),
-        "backend rules list should fail on 403"
-    );
+    assert!(result.is_err(), "backend rules list should fail on 403");
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
 }
