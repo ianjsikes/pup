@@ -3912,7 +3912,6 @@ fn test_symdb_view_display() {
     );
 }
 
-
 // -------------------------------------------------------------------------
 // Software Catalog
 // -------------------------------------------------------------------------
@@ -3925,7 +3924,11 @@ async fn test_software_catalog_entities_list() {
     let cfg = test_config(&server.url());
     let _mock = mock_any(&mut server, "GET", r#"{"data":[]}"#).await;
     let result = crate::commands::software_catalog::entities_list(&cfg).await;
-    assert!(result.is_ok(), "software catalog entities list failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "software catalog entities list failed: {:?}",
+        result.err()
+    );
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
 }
@@ -3938,7 +3941,11 @@ async fn test_software_catalog_kinds_list() {
     let cfg = test_config(&server.url());
     let _mock = mock_any(&mut server, "GET", r#"{"data":[]}"#).await;
     let result = crate::commands::software_catalog::kinds_list(&cfg).await;
-    assert!(result.is_ok(), "software catalog kinds list failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "software catalog kinds list failed: {:?}",
+        result.err()
+    );
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
 }
@@ -3951,7 +3958,11 @@ async fn test_software_catalog_relations_list() {
     let cfg = test_config(&server.url());
     let _mock = mock_any(&mut server, "GET", r#"{"data":[]}"#).await;
     let result = crate::commands::software_catalog::relations_list(&cfg).await;
-    assert!(result.is_ok(), "software catalog relations list failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "software catalog relations list failed: {:?}",
+        result.err()
+    );
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
 }
@@ -3971,7 +3982,10 @@ async fn test_software_catalog_entities_list_error() {
         .create_async()
         .await;
     let result = crate::commands::software_catalog::entities_list(&cfg).await;
-    assert!(result.is_err(), "expected software catalog entities list to fail on 500");
+    assert!(
+        result.is_err(),
+        "expected software catalog entities list to fail on 500"
+    );
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
 }
@@ -3988,7 +4002,11 @@ async fn test_incident_teams_list() {
     let cfg = test_config(&server.url());
     let _mock = mock_any(&mut server, "GET", r#"{"data":[],"meta":{}}"#).await;
     let result = crate::commands::incidents::teams_list(&cfg).await;
-    assert!(result.is_ok(), "incident teams list failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "incident teams list failed: {:?}",
+        result.err()
+    );
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
 }
