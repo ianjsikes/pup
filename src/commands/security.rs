@@ -1,3 +1,8 @@
+use crate::client;
+use crate::commands::ddsql;
+use crate::config::Config;
+use crate::formatter;
+use crate::util;
 use anyhow::Result;
 use datadog_api_client::datadogV2::api_application_security::ApplicationSecurityAPI;
 use datadog_api_client::datadogV2::api_entity_risk_scores::{
@@ -23,10 +28,117 @@ use datadog_api_client::datadogV2::model::{
     SecurityMonitoringSuppressionSort, SecurityMonitoringSuppressionUpdateRequest,
 };
 
-use crate::client;
-use crate::config::Config;
-use crate::formatter;
-use crate::util;
+const SCHEMA_URL: &str = "https://docs.datadoghq.com/security/guide/findings-schema.md";
+const SCHEMA_SECTION_MARKER: &str = "## Schema Reference";
+
+/// Fetch the security findings schema reference from Datadog docs.
+///
+/// Downloads the markdown page at runtime, extracts everything after
+/// "## Schema Reference", and strips template directives ({% ... %})
+/// so the output is clean, readable plaintext/markdown.
+async fn fetch_schema_markdown() -> Result<String> {
+    let resp = reqwest::Client::new()
+        .get(SCHEMA_URL)
+        .header("User-Agent", "pup-cli")
+        .send()
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to fetch schema from {SCHEMA_URL}: {e}"))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        anyhow::bail!("failed to fetch schema from {SCHEMA_URL} (HTTP {status})");
+    }
+
+    let body = resp
+        .text()
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to read schema response: {e}"))?;
+
+    // Extract everything after "## Schema Reference"
+    let schema_section = body
+        .find(SCHEMA_SECTION_MARKER)
+        .map(|pos| &body[pos..])
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "schema page did not contain expected section '{SCHEMA_SECTION_MARKER}'"
+            )
+        })?;
+
+    // Trim trailing sections that aren't part of the schema reference
+    let schema_section = schema_section
+        .find("## Further reading")
+        .map(|pos| schema_section[..pos].trim_end())
+        .unwrap_or(schema_section);
+
+    // Strip template directives: {% ... %}
+    let mut cleaned = strip_template_directives(schema_section);
+
+    // Add source attribution
+    cleaned.push_str("\n\n---\n*This schema was fetched from Datadog public documentation.*\n");
+
+    Ok(cleaned)
+}
+
+/// Remove template directives like {% collapsible-section %}, {% /collapsible-section %},
+/// {% callout %}, {% /callout %}, {% tab %}, etc. Also removes lines that become empty
+/// after stripping.
+fn strip_template_directives(input: &str) -> String {
+    let mut lines: Vec<&str> = Vec::new();
+    for line in input.lines() {
+        let trimmed = line.trim();
+        // Skip lines that are entirely a template directive
+        if trimmed.starts_with("{%") && trimmed.ends_with("%}") {
+            continue;
+        }
+        // Strip inline template directives (e.g., "## Schema Reference{% #schema-reference %}")
+        if let Some(pos) = line.find("{%") {
+            let cleaned = line[..pos].trim_end();
+            if !cleaned.is_empty() {
+                lines.push(cleaned);
+            }
+        } else {
+            lines.push(line);
+        }
+    }
+    lines.join("\n")
+}
+
+pub async fn findings_schema(cfg: &Config) -> Result<()> {
+    let schema = fetch_schema_markdown().await?;
+
+    if cfg.agent_mode {
+        eprintln!(
+            "Use these fields with `pup security findings analyze --query \"SELECT ... FROM dd.security_findings(...)\"`"
+        );
+    }
+
+    println!("{schema}");
+    Ok(())
+}
+
+// ---- Findings Analyze ----
+
+pub async fn findings_analyze(
+    cfg: &Config,
+    query: &str,
+    from: &str,
+    to: &str,
+    limit: i64,
+) -> Result<()> {
+    if !query.contains("dd.security_findings") {
+        eprintln!("Warning: query doesn't use dd.security_findings(). Did you mean to use `pup ddsql table`?");
+    }
+
+    match ddsql::execute_ddsql_query(cfg, query, from, to, Some(limit as i32)).await {
+        Ok(rows) => formatter::output(cfg, &rows),
+        Err(e) => {
+            eprintln!(
+                "Hint: run `pup security findings schema` to see available fields and types for dd.security_findings()."
+            );
+            Err(e)
+        }
+    }
+}
 
 pub async fn rules_list(cfg: &Config, sort: Option<String>) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
@@ -466,4 +578,42 @@ pub async fn restriction_policy_delete(cfg: &Config, resource_id: &str) -> Resul
         .map_err(|e| anyhow::anyhow!("failed to delete restriction policy: {e:?}"))?;
     println!("Restriction policy for '{resource_id}' deleted.");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_strip_template_directives_removes_standalone() {
+        let input = "## Heading\n{% collapsible-section #foo %}\n### Sub\nContent here.\n{% /collapsible-section %}";
+        let result = strip_template_directives(input);
+        assert_eq!(result, "## Heading\n### Sub\nContent here.");
+    }
+
+    #[test]
+    fn test_strip_template_directives_removes_inline() {
+        let input = "## Schema Reference{% #schema-reference %}\nSome text.";
+        let result = strip_template_directives(input);
+        assert_eq!(result, "## Schema Reference\nSome text.");
+    }
+
+    #[test]
+    fn test_strip_template_directives_preserves_tables() {
+        let input = "| Name | Type |\n| ---- | ---- |\n| `severity` | string |";
+        let result = strip_template_directives(input);
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn test_strip_template_directives_empty_input() {
+        assert_eq!(strip_template_directives(""), "");
+    }
+
+    #[test]
+    fn test_strip_template_directives_mixed() {
+        let input = "Line 1\n{% tab title=\"Foo\" %}\nLine 2\n{% /tab %}\nLine 3";
+        let result = strip_template_directives(input);
+        assert_eq!(result, "Line 1\nLine 2\nLine 3");
+    }
 }

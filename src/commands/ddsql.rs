@@ -133,6 +133,21 @@ async fn execute_async_query(cfg: &Config, body: Value) -> Result<Value> {
     }
 }
 
+/// Execute a DDSQL query and return the result as a row-based JSON array.
+///
+/// Shared function used by both `ddsql table` and `security findings-analyze`.
+pub async fn execute_ddsql_query(
+    cfg: &Config,
+    query: &str,
+    from: &str,
+    to: &str,
+    limit: Option<i32>,
+) -> Result<Value> {
+    let body = build_advanced_table_request(query, from, to, limit)?;
+    let data = execute_async_query(cfg, body).await?;
+    columnar_to_rows(&data)
+}
+
 pub async fn table(
     cfg: &Config,
     query: &str,
@@ -142,9 +157,7 @@ pub async fn table(
     limit: Option<i32>,
     _offset: Option<i32>,
 ) -> Result<()> {
-    let body = build_advanced_table_request(query, from, to, limit)?;
-    let data = execute_async_query(cfg, body).await?;
-    let rows = columnar_to_rows(&data)?;
+    let rows = execute_ddsql_query(cfg, query, from, to, limit).await?;
     formatter::output(cfg, &rows)
 }
 
