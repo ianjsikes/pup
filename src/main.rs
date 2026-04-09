@@ -9447,8 +9447,8 @@ async fn main_inner() -> anyhow::Result<()> {
             cfg.validate_auth()?;
             match action {
                 SecurityActions::Rules { action } => match action {
-                    SecurityRuleActions::List { sort, .. } => {
-                        commands::security::rules_list(&cfg, sort).await?
+                    SecurityRuleActions::List { filter, sort } => {
+                        commands::security::rules_list(&cfg, filter, sort).await?
                     }
                     SecurityRuleActions::Get { rule_id } => {
                         commands::security::rules_get(&cfg, &rule_id).await?;

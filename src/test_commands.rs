@@ -1926,7 +1926,7 @@ async fn test_security_rules_list() {
     let mut s = mockito::Server::new_async().await;
     let cfg = test_config(&s.url());
     mock_all(&mut s, r#"{"data": []}"#).await;
-    let _ = crate::commands::security::rules_list(&cfg, None).await;
+    let _ = crate::commands::security::rules_list(&cfg, None, None).await;
     cleanup_env();
 }
 #[tokio::test]

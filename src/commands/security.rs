@@ -140,7 +140,7 @@ pub async fn findings_analyze(
     }
 }
 
-pub async fn rules_list(cfg: &Config, sort: Option<String>) -> Result<()> {
+pub async fn rules_list(cfg: &Config, filter: Option<String>, sort: Option<String>) -> Result<()> {
     let dd_cfg = client::make_dd_config(cfg);
     let api = match client::make_bearer_client(cfg) {
         Some(c) => SecurityMonitoringAPI::with_client_and_config(dd_cfg, c),
@@ -149,6 +149,9 @@ pub async fn rules_list(cfg: &Config, sort: Option<String>) -> Result<()> {
     let mut params = ListSecurityMonitoringRulesOptionalParams::default();
     if let Some(s) = sort {
         params = params.sort(parse_rule_sort(&s));
+    }
+    if let Some(f) = filter {
+        params = params.query(f);
     }
     let resp = api
         .list_security_monitoring_rules(params)
