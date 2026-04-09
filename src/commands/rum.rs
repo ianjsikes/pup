@@ -481,10 +481,7 @@ pub async fn aggregate(cfg: &Config, args: RumAggregateArgs) -> Result<()> {
         let group_by_arr: Vec<serde_json::Value> = group_by
             .iter()
             .map(|facet| {
-                let mut obj = serde_json::json!({
-                    "facet": facet,
-                    "sort": { "type": "measure", "order": "desc", "metric": "c0" }
-                });
+                let mut obj = serde_json::json!({ "facet": facet });
                 if limit > 0 {
                     obj["limit"] = serde_json::json!(limit);
                 }
