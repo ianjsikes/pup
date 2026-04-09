@@ -1278,7 +1278,11 @@ async fn test_api_server_error() {
         .await;
 
     let result = crate::api::get(&cfg, "/api/v1/test", &[]).await;
-    assert!(result.is_err(), "expected error but got ok: {:?}", result.ok());
+    assert!(
+        result.is_err(),
+        "expected error but got ok: {:?}",
+        result.ok()
+    );
     assert!(result.unwrap_err().to_string().contains("500"));
     mock.assert_async().await;
     cleanup_env();
@@ -2518,7 +2522,11 @@ async fn test_llm_obs_projects_list_404() {
         .await;
 
     let result = crate::commands::llm_obs::projects_list(&cfg).await;
-    assert!(result.is_err(), "expected error but got ok: {:?}", result.ok());
+    assert!(
+        result.is_err(),
+        "expected error but got ok: {:?}",
+        result.ok()
+    );
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
 }
@@ -2613,7 +2621,11 @@ async fn test_llm_obs_projects_create_500() {
         .await;
 
     let result = crate::commands::llm_obs::projects_create(&cfg, tmp.to_str().unwrap()).await;
-    assert!(result.is_err(), "expected error but got ok: {:?}", result.ok());
+    assert!(
+        result.is_err(),
+        "expected error but got ok: {:?}",
+        result.ok()
+    );
     let _ = std::fs::remove_file(tmp);
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
@@ -2694,7 +2706,11 @@ async fn test_llm_obs_experiments_list_401() {
         .await;
 
     let result = crate::commands::llm_obs::experiments_list(&cfg, None, None).await;
-    assert!(result.is_err(), "expected error but got ok: {:?}", result.ok());
+    assert!(
+        result.is_err(),
+        "expected error but got ok: {:?}",
+        result.ok()
+    );
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
 }
@@ -2746,7 +2762,11 @@ async fn test_llm_obs_experiments_create_422() {
         .await;
 
     let result = crate::commands::llm_obs::experiments_create(&cfg, tmp.to_str().unwrap()).await;
-    assert!(result.is_err(), "expected error but got ok: {:?}", result.ok());
+    assert!(
+        result.is_err(),
+        "expected error but got ok: {:?}",
+        result.ok()
+    );
     let _ = std::fs::remove_file(tmp);
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
@@ -2801,7 +2821,11 @@ async fn test_llm_obs_experiments_update_404() {
 
     let result =
         crate::commands::llm_obs::experiments_update(&cfg, "missing", tmp.to_str().unwrap()).await;
-    assert!(result.is_err(), "expected error but got ok: {:?}", result.ok());
+    assert!(
+        result.is_err(),
+        "expected error but got ok: {:?}",
+        result.ok()
+    );
     let _ = std::fs::remove_file(tmp);
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
@@ -2853,7 +2877,11 @@ async fn test_llm_obs_experiments_delete_500() {
         .await;
 
     let result = crate::commands::llm_obs::experiments_delete(&cfg, tmp.to_str().unwrap()).await;
-    assert!(result.is_err(), "expected error but got ok: {:?}", result.ok());
+    assert!(
+        result.is_err(),
+        "expected error but got ok: {:?}",
+        result.ok()
+    );
     let _ = std::fs::remove_file(tmp);
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
@@ -2900,7 +2928,11 @@ async fn test_llm_obs_datasets_list_403() {
         .await;
 
     let result = crate::commands::llm_obs::datasets_list(&cfg, "proj-1").await;
-    assert!(result.is_err(), "expected error but got ok: {:?}", result.ok());
+    assert!(
+        result.is_err(),
+        "expected error but got ok: {:?}",
+        result.ok()
+    );
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");
 }
