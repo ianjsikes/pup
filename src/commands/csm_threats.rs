@@ -165,7 +165,6 @@ fn make_sec_api(cfg: &Config) -> SecurityMonitoringAPI {
 }
 
 pub async fn backend_rules_list(cfg: &Config, query: Option<String>) -> Result<()> {
-    cfg.validate_api_and_app_keys()?;
     let api = make_sec_api(cfg);
     let filter = match query {
         Some(q) => format!("type:workload_security {q}"),
@@ -182,7 +181,6 @@ pub async fn backend_rules_list(cfg: &Config, query: Option<String>) -> Result<(
 }
 
 pub async fn backend_rules_get(cfg: &Config, rule_id: &str) -> Result<()> {
-    cfg.validate_api_and_app_keys()?;
     let api = make_sec_api(cfg);
     let resp = api
         .get_security_monitoring_rule(rule_id.to_string())
@@ -192,7 +190,6 @@ pub async fn backend_rules_get(cfg: &Config, rule_id: &str) -> Result<()> {
 }
 
 pub async fn backend_rules_create(cfg: &Config, file: &str) -> Result<()> {
-    cfg.validate_api_and_app_keys()?;
     let body: SecurityMonitoringRuleCreatePayload = util::read_json_file(file)?;
     let api = make_sec_api(cfg);
     let resp = api
@@ -203,7 +200,6 @@ pub async fn backend_rules_create(cfg: &Config, file: &str) -> Result<()> {
 }
 
 pub async fn backend_rules_update(cfg: &Config, rule_id: &str, file: &str) -> Result<()> {
-    cfg.validate_api_and_app_keys()?;
     let body: SecurityMonitoringRuleUpdatePayload = util::read_json_file(file)?;
     let api = make_sec_api(cfg);
     let resp = api
@@ -214,7 +210,6 @@ pub async fn backend_rules_update(cfg: &Config, rule_id: &str, file: &str) -> Re
 }
 
 pub async fn backend_rules_delete(cfg: &Config, rule_id: &str) -> Result<()> {
-    cfg.validate_api_and_app_keys()?;
     let api = make_sec_api(cfg);
     api.delete_security_monitoring_rule(rule_id.to_string())
         .await
@@ -224,7 +219,6 @@ pub async fn backend_rules_delete(cfg: &Config, rule_id: &str) -> Result<()> {
 }
 
 pub async fn backend_rules_validate(cfg: &Config, file: &str) -> Result<()> {
-    cfg.validate_api_and_app_keys()?;
     let body: SecurityMonitoringRuleValidatePayload = util::read_json_file(file)?;
     let api = make_sec_api(cfg);
     api.validate_security_monitoring_rule(body)
