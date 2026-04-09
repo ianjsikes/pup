@@ -4266,14 +4266,13 @@ enum SecurityFindingActions {
     /// Call this before using `findings analyze` to discover queryable fields.
     #[command(name = "schema")]
     Schema,
-    /// Analyze security findings using SQL with dd.security_findings().
-    /// Run `pup security findings schema` first to see available fields.
-    #[command(name = "analyze")]
+    /// Analyze security findings using DDSQL. Workflow: 1) Run `pup security findings schema` to get fields, 2) Query with SQL. Function: dd.security_findings(columns => ARRAY['@field', ...], filter => '@field:value', finding_types => ARRAY['type', ...]). AS clause types: VARCHAR, BIGINT, DECIMAL, BOOLEAN, TIMESTAMP. Notes: 'columns' ordering MUST match the AS clause. Use -@compliance.evaluation:pass filter to exclude passing findings. Prefer ordering by @severity_details.adjusted.score. Use LIMIT to reduce output. Example: SELECT rule_name, finding_type, severity, count(*) as cnt FROM dd.security_findings(columns => ARRAY['@rule.name', '@finding_type', '@severity'], filter => '@status:open @severity:(high OR critical)') AS (rule_name VARCHAR, finding_type VARCHAR, severity VARCHAR) GROUP BY rule_name, finding_type, severity ORDER BY cnt DESC LIMIT 100
+    #[command(
+        name = "analyze",
+        long_about = "Analyze security findings using DDSQL with dd.security_findings().\n\nWorkflow: 1) Call `pup security findings schema` first to get available fields\n         2) Use this command to query with SQL\n\nQueries live data from the last 24 hours using flexible SQL aggregations, filtering, and grouping.\n\nFunction signature:\n  dd.security_findings(\n    columns => ARRAY['@field1', '@field2', ...],\n    filter => '@field:value',\n    finding_types => ARRAY['library_vulnerability', ...]\n  )\n\nThe AS clause must declare column names and DDSQL types:\n  AS (col1 VARCHAR, col2 BIGINT, ...)\n\nAvailable types: VARCHAR, BIGINT, DECIMAL, BOOLEAN, TIMESTAMP\n\nIMPORTANT notes:\n  - 'columns =>' ordering MUST match the AS clause column ordering\n  - If querying all findings or misconfigurations, use -@compliance.evaluation:pass filter to exclude passing findings\n  - Prefer ordering by severity score (@severity_details.adjusted.score) when relevant\n  - Use LIMIT to reduce context\n\nExample queries:\n\n  Top failing rules across finding types:\n    --query \"SELECT rule_name, finding_type, severity, count(*) as affected_resources\n      FROM dd.security_findings(\n        columns => ARRAY['@rule.name', '@finding_type', '@severity'],\n        filter => '@status:open @severity:(high OR critical)'\n      ) AS (rule_name VARCHAR, finding_type VARCHAR, severity VARCHAR)\n      GROUP BY rule_name, finding_type, severity\n      ORDER BY affected_resources DESC LIMIT 100\"\n\n  Open library vulnerabilities with exploits:\n    --query \"SELECT title, resource_name, severity\n      FROM dd.security_findings(\n        columns => ARRAY['@title', '@resource_name', '@severity'],\n        filter => '@status:open @risk.has_exploit_available:true',\n        finding_types => ARRAY['library_vulnerability']\n      ) AS (title VARCHAR, resource_name VARCHAR, severity VARCHAR)\n      LIMIT 25\""
+    )]
     Analyze {
-        /// SQL query using dd.security_findings() function.
-        /// Example: SELECT severity, count(*) as cnt FROM dd.security_findings(
-        ///   columns => ARRAY['@severity'], filter => '@status:open'
-        /// ) AS (severity VARCHAR) GROUP BY severity
+        /// SQL query using dd.security_findings(columns => ARRAY['@field', ...], filter => '@field:value', finding_types => ARRAY['type', ...]) AS (col TYPE, ...). 'columns' ordering MUST match the AS clause. Run `pup security findings schema` to see fields. Types: VARCHAR, BIGINT, DECIMAL, BOOLEAN, TIMESTAMP
         #[arg(long, short)]
         query: String,
 
