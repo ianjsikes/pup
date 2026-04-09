@@ -55,6 +55,7 @@ pub fn read_only_scopes() -> Vec<&'static str> {
         "bits_investigations_read",
         "cases_read",
         "ci_visibility_read",
+        "cloud_cost_management_read",
         "code_coverage_read",
         "test_optimization_read",
         "dashboards_read",
@@ -114,6 +115,9 @@ pub fn default_scopes() -> Vec<&'static str> {
         // CI Visibility
         "ci_visibility_read",
         "code_coverage_read",
+        // Cloud Cost Management
+        "cloud_cost_management_read",
+        "cloud_cost_management_write",
         "dora_metrics_write",
         "test_optimization_read",
         "test_optimization_write",
@@ -254,7 +258,7 @@ mod tests {
     #[test]
     fn test_default_scopes() {
         let scopes = default_scopes();
-        assert_eq!(scopes.len(), 77);
+        assert_eq!(scopes.len(), 79);
         assert!(scopes.contains(&"dashboards_read"));
         assert!(scopes.contains(&"monitors_read"));
         assert!(scopes.contains(&"logs_read_data"));

@@ -11,8 +11,11 @@ use crate::formatter;
 use crate::util;
 
 fn make_usage_api(cfg: &Config) -> UsageMeteringV2API {
-    // Cost/billing endpoints require API key auth — no OAuth support.
-    UsageMeteringV2API::with_config(client::make_dd_config(cfg))
+    let dd_cfg = client::make_dd_config(cfg);
+    match client::make_bearer_client(cfg) {
+        Some(c) => UsageMeteringV2API::with_client_and_config(dd_cfg, c),
+        None => UsageMeteringV2API::with_config(dd_cfg),
+    }
 }
 
 pub async fn projected(cfg: &Config) -> Result<()> {
@@ -64,8 +67,11 @@ pub async fn attribution(cfg: &Config, start: String, fields: Option<String>) ->
 // ---- Cloud Cost Management — AWS CUR Config ----
 
 fn make_ccm_api(cfg: &Config) -> CloudCostManagementAPI {
-    // CCM endpoints require API key auth — no OAuth support.
-    CloudCostManagementAPI::with_config(client::make_dd_config(cfg))
+    let dd_cfg = client::make_dd_config(cfg);
+    match client::make_bearer_client(cfg) {
+        Some(c) => CloudCostManagementAPI::with_client_and_config(dd_cfg, c),
+        None => CloudCostManagementAPI::with_config(dd_cfg),
+    }
 }
 
 pub async fn aws_config_list(cfg: &Config) -> Result<()> {
