@@ -272,6 +272,27 @@ static UNSTABLE_OPS: &[&str] = &[
     "v2.cancel_data_deletion_request",
     "v2.create_data_deletion_request",
     "v2.get_data_deletion_requests",
+    // Service Scorecards (7)
+    "v2.create_scorecard_outcomes_batch",
+    "v2.create_scorecard_rule",
+    "v2.delete_scorecard_rule",
+    "v2.list_scorecard_outcomes",
+    "v2.list_scorecard_rules",
+    "v2.update_scorecard_outcomes_async",
+    "v2.update_scorecard_rule",
+    // Static Analysis (10)
+    "v2.create_custom_rule",
+    "v2.create_custom_rule_revision",
+    "v2.create_sca_resolve_vulnerable_symbols",
+    "v2.create_sca_result",
+    "v2.delete_custom_rule",
+    "v2.delete_custom_ruleset",
+    "v2.get_custom_rule",
+    "v2.get_custom_rule_revision",
+    "v2.get_custom_ruleset",
+    "v2.list_custom_rule_revisions",
+    "v2.revert_custom_rule_revision",
+    "v2.update_custom_ruleset",
 ];
 
 // ---------------------------------------------------------------------------
@@ -907,7 +928,7 @@ mod tests {
 
     #[test]
     fn test_unstable_ops_count() {
-        assert_eq!(UNSTABLE_OPS.len(), 112);
+        assert_eq!(UNSTABLE_OPS.len(), 131);
     }
 
     #[test]

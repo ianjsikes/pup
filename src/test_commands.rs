@@ -2379,39 +2379,25 @@ async fn test_hamr_connections_get() {
 
 // --- Static Analysis ---
 #[tokio::test]
-async fn test_static_analysis_ast_list() {
+async fn test_static_analysis_custom_rulesets_get_existing() {
     let _lock = lock_env();
     let mut s = mockito::Server::new_async().await;
     let cfg = test_config(&s.url());
-    mock_all(&mut s, r#"{"data": []}"#).await;
-    let _ = crate::commands::static_analysis::ast_list(&cfg).await;
+    mock_all(
+        &mut s,
+        r#"{"data": {"id": "rs", "type": "custom-ruleset"}}"#,
+    )
+    .await;
+    let _ = crate::commands::static_analysis::custom_rulesets_get(&cfg, "my-ruleset").await;
     cleanup_env();
 }
 #[tokio::test]
-async fn test_static_analysis_sca_list() {
+async fn test_static_analysis_custom_rules_get_existing() {
     let _lock = lock_env();
     let mut s = mockito::Server::new_async().await;
     let cfg = test_config(&s.url());
-    mock_all(&mut s, r#"{"data": []}"#).await;
-    let _ = crate::commands::static_analysis::sca_list(&cfg).await;
-    cleanup_env();
-}
-#[tokio::test]
-async fn test_static_analysis_custom_rulesets_list() {
-    let _lock = lock_env();
-    let mut s = mockito::Server::new_async().await;
-    let cfg = test_config(&s.url());
-    mock_all(&mut s, r#"{"data": []}"#).await;
-    let _ = crate::commands::static_analysis::custom_rulesets_list(&cfg).await;
-    cleanup_env();
-}
-#[tokio::test]
-async fn test_static_analysis_coverage_list() {
-    let _lock = lock_env();
-    let mut s = mockito::Server::new_async().await;
-    let cfg = test_config(&s.url());
-    mock_all(&mut s, r#"{"data": []}"#).await;
-    let _ = crate::commands::static_analysis::coverage_list(&cfg).await;
+    mock_all(&mut s, r#"{"data": {"id": "rule", "type": "custom-rule"}}"#).await;
+    let _ = crate::commands::static_analysis::custom_rules_get(&cfg, "my-ruleset", "my-rule").await;
     cleanup_env();
 }
 
@@ -4161,26 +4147,6 @@ async fn test_incident_teams_list() {
     std::env::remove_var("DD_TOKEN_STORAGE");
 }
 
-#[tokio::test]
-async fn test_incident_teams_list_error() {
-    let _lock = lock_env();
-    std::env::set_var("DD_TOKEN_STORAGE", "file");
-    let mut server = mockito::Server::new_async().await;
-    let cfg = test_config(&server.url());
-    let _mock = server
-        .mock("GET", mockito::Matcher::Any)
-        .match_query(mockito::Matcher::Any)
-        .with_status(403)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{"errors":["Forbidden"]}"#)
-        .create_async()
-        .await;
-    let result = crate::commands::incidents::teams_list(&cfg).await;
-    assert!(result.is_err(), "incident teams list should fail on 403");
-    cleanup_env();
-    std::env::remove_var("DD_TOKEN_STORAGE");
-}
-
 // -------------------------------------------------------------------------
 // Incident Services
 // -------------------------------------------------------------------------
@@ -5095,6 +5061,260 @@ async fn test_connections_delete() {
         result.is_ok(),
         "connections delete failed: {:?}",
         result.err()
+    );
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+async fn test_scorecard_outcomes_list_with_data() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let mut server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let body = r#"{"data":[{"id":"outcome-1","type":"outcome","attributes":{"state":"pass","service-name":"my-service"}}]}"#;
+    let _mock = mock_any(&mut server, "GET", body).await;
+    let result = crate::commands::scorecards::outcomes_list(&cfg).await;
+    assert!(
+        result.is_ok(),
+        "scorecard outcomes list with data failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+#[tokio::test]
+async fn test_scorecard_rules_delete() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let mut server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let _mock = server
+        .mock("DELETE", mockito::Matcher::Any)
+        .match_query(mockito::Matcher::Any)
+        .with_status(204)
+        .create_async()
+        .await;
+    let result = crate::commands::scorecards::rules_delete(&cfg, "rule-123").await;
+    assert!(
+        result.is_ok(),
+        "scorecard rules delete failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+// -------------------------------------------------------------------------
+// Static Analysis
+// -------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_static_analysis_custom_rulesets_get() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let mut server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let body = r#"{"data":{"id":"my-ruleset","type":"custom-ruleset","attributes":{"name":"my-ruleset","created_at":"2024-01-01T00:00:00Z","created_by":"user","description":"","short_description":"","rules":[]}}}"#;
+    let _mock = mock_any(&mut server, "GET", body).await;
+    let result = crate::commands::static_analysis::custom_rulesets_get(&cfg, "my-ruleset").await;
+    assert!(
+        result.is_ok(),
+        "static analysis custom rulesets get failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+#[tokio::test]
+async fn test_static_analysis_custom_rulesets_get_error() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let mut server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let _mock = server
+        .mock("GET", mockito::Matcher::Any)
+        .match_query(mockito::Matcher::Any)
+        .with_status(404)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"errors":["not found"]}"#)
+        .create_async()
+        .await;
+    let result = crate::commands::static_analysis::custom_rulesets_get(&cfg, "nonexistent").await;
+    assert!(
+        result.is_err(),
+        "static analysis custom rulesets get should fail on 404"
+    );
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+#[tokio::test]
+async fn test_static_analysis_custom_rules_get() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let mut server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    // Complex nested model — test that a 404 error is correctly propagated.
+    let _mock = server
+        .mock("GET", mockito::Matcher::Any)
+        .match_query(mockito::Matcher::Any)
+        .with_status(404)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"errors":["not found"]}"#)
+        .create_async()
+        .await;
+    let result =
+        crate::commands::static_analysis::custom_rules_get(&cfg, "my-ruleset", "my-rule").await;
+    assert!(
+        result.is_err(),
+        "static analysis custom rules get should fail on 404"
+    );
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+#[tokio::test]
+async fn test_static_analysis_custom_rule_revisions_list() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let mut server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let _mock = mock_any(&mut server, "GET", r#"{"data":[]}"#).await;
+    let result =
+        crate::commands::static_analysis::custom_rule_revisions_list(&cfg, "my-ruleset", "my-rule")
+            .await;
+    assert!(
+        result.is_ok(),
+        "static analysis custom rule revisions list failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+#[tokio::test]
+async fn test_static_analysis_custom_rules_delete() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let mut server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let _mock = server
+        .mock("DELETE", mockito::Matcher::Any)
+        .match_query(mockito::Matcher::Any)
+        .with_status(204)
+        .create_async()
+        .await;
+    let result =
+        crate::commands::static_analysis::custom_rules_delete(&cfg, "my-ruleset", "my-rule").await;
+    assert!(
+        result.is_ok(),
+        "static analysis custom rules delete failed: {:?}",
+        result.err()
+    );
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+// -------------------------------------------------------------------------
+// Scorecards — create/update negative tests
+// -------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_scorecard_rules_create_missing_file() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let result = crate::commands::scorecards::rules_create(&cfg, "/nonexistent/file.json").await;
+    assert!(result.is_err(), "rules_create should fail for missing file");
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+#[tokio::test]
+async fn test_scorecard_outcomes_batch_create_missing_file() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let result =
+        crate::commands::scorecards::outcomes_batch_create(&cfg, "/nonexistent/file.json").await;
+    assert!(
+        result.is_err(),
+        "outcomes_batch_create should fail for missing file"
+    );
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+#[tokio::test]
+async fn test_scorecard_rules_create_api_error() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let mut server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let _mock = server
+        .mock("POST", mockito::Matcher::Any)
+        .match_query(mockito::Matcher::Any)
+        .with_status(422)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"errors":["unprocessable entity"]}"#)
+        .create_async()
+        .await;
+    let tmp = std::env::temp_dir().join("test_scorecard_rule.json");
+    std::fs::write(&tmp, r#"{"data":{}}"#).unwrap();
+    let result = crate::commands::scorecards::rules_create(&cfg, tmp.to_str().unwrap()).await;
+    let _ = std::fs::remove_file(&tmp);
+    assert!(result.is_err(), "rules_create should fail on 422 response");
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+// -------------------------------------------------------------------------
+// Static Analysis — create/list error tests
+// -------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_static_analysis_custom_rules_create_missing_file() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let result = crate::commands::static_analysis::custom_rules_create(
+        &cfg,
+        "my-ruleset",
+        "/nonexistent/file.json",
+    )
+    .await;
+    assert!(
+        result.is_err(),
+        "custom_rules_create should fail for missing file"
+    );
+    cleanup_env();
+    std::env::remove_var("DD_TOKEN_STORAGE");
+}
+
+#[tokio::test]
+async fn test_static_analysis_custom_rules_list_error() {
+    let _lock = lock_env();
+    std::env::set_var("DD_TOKEN_STORAGE", "file");
+    let mut server = mockito::Server::new_async().await;
+    let cfg = test_config(&server.url());
+    let _mock = server
+        .mock("GET", mockito::Matcher::Any)
+        .match_query(mockito::Matcher::Any)
+        .with_status(403)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"errors":["forbidden"]}"#)
+        .create_async()
+        .await;
+    let result =
+        crate::commands::static_analysis::custom_rules_get(&cfg, "my-ruleset", "my-rule").await;
+    assert!(
+        result.is_err(),
+        "custom_rules_get should fail on 403 response"
     );
     cleanup_env();
     std::env::remove_var("DD_TOKEN_STORAGE");

@@ -33,7 +33,7 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | incidents | list, get, attachments, settings, handles, postmortem-templates | src/commands/incidents.rs | ✅ |
 | rum | apps, metrics, retention-filters, sessions, playlists, heatmaps | src/commands/rum.rs | ✅ |
 | cicd | pipelines, events, tests, dora, flaky-tests | src/commands/cicd.rs | ✅ |
-| static-analysis | custom-rulesets | src/commands/static_analysis.rs | ✅ |
+| static-analysis | custom-rulesets (get, update, delete), custom-rules (get, create, delete, revisions, revision) | src/commands/static_analysis.rs | ✅ |
 | downtime | list, get, cancel | src/commands/downtime.rs | ✅ |
 | tags | list, get, add, update, delete | src/commands/tags.rs | ✅ |
 | events | list, search, get | src/commands/events.rs | ✅ |
@@ -53,7 +53,7 @@ pup <domain> <subgroup> <action> [options] # Nested commands
 | service-catalog | list, get | src/commands/service_catalog.rs | ✅ |
 | idp | assist, find, owner, deps, register | src/commands/idp.rs | ✅ |
 | error-tracking | issues (search, get) | src/commands/error_tracking.rs | ✅ |
-| scorecards | list, get | src/commands/scorecards.rs | ✅ |
+| scorecards | rules (list, create, update, delete), outcomes (list, batch-create) | src/commands/scorecards.rs | ✅ |
 | usage | summary, hourly | src/commands/usage.rs | ✅ |
 | apm | services (list, stats, operations, resources), entities (list), dependencies (list), flow-map, troubleshooting (list), service-config (get), service-library-config (get) | src/commands/apm.rs | ✅ |
 | containers | list, images (list) | src/commands/containers.rs | ✅ |
@@ -157,7 +157,7 @@ pup infrastructure hosts list
 
 ### Security & Compliance
 - **security** - Security monitoring (rules, signals, findings, content-packs, risk-scores)
-- **static-analysis** - Code security (ast, custom-rulesets, sca, coverage)
+- **static-analysis** - Code security (custom-rulesets, custom-rules)
 - **audit-logs** - Audit trail (list, search)
 - **data-governance** - Sensitive data scanning (scanner-rules list)
 
@@ -169,7 +169,7 @@ pup infrastructure hosts list
 - **cicd** - CI/CD visibility (pipelines, events, tests, dora, flaky-tests)
 - **code-coverage** - Code coverage summaries (branch, commit)
 - **error-tracking** - Error management (issues search, issues get)
-- **scorecards** - Service quality (list, get)
+- **scorecards** - Service quality (rules, outcomes)
 - **service-catalog** - Service registry (list, get)
 - **idp** - Service Catalog agent access (assist, find, owner, deps, register)
 - **debugger** - Live Debugger (probes list, get, create, delete, watch)
