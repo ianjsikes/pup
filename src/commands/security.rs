@@ -133,8 +133,15 @@ pub async fn findings_analyze(
         eprintln!("Warning: query doesn't use dd.security_findings(). Did you mean to use `pup ddsql table`?");
     }
 
-    let rows = ddsql::execute_ddsql_query(cfg, query, from, to, Some(limit as i32)).await?;
-    formatter::output(cfg, &rows)
+    match ddsql::execute_ddsql_query(cfg, query, from, to, Some(limit as i32)).await {
+        Ok(rows) => formatter::output(cfg, &rows),
+        Err(e) => {
+            eprintln!(
+                "Hint: run `pup security findings schema` to see available fields and types for dd.security_findings()."
+            );
+            Err(e)
+        }
+    }
 }
 
 pub async fn rules_list(cfg: &Config, sort: Option<String>) -> Result<()> {
