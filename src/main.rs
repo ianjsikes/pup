@@ -175,6 +175,67 @@ enum Commands {
         #[command(subcommand)]
         action: AliasActions,
     },
+    /// Make authenticated requests directly to the Datadog API
+    ///
+    /// Sends raw HTTP requests to Datadog API endpoints using the current
+    /// authentication credentials (OAuth2 token or API/APP keys). Useful
+    /// for endpoints not yet covered by a dedicated pup subcommand.
+    ///
+    /// The endpoint may be given as a relative path (v2/monitors) or an
+    /// absolute path (/api/v2/monitors). Relative paths are automatically
+    /// prefixed with /api/.
+    ///
+    /// EXAMPLES:
+    ///   # GET a list of monitors
+    ///   pup api v2/monitors
+    ///
+    ///   # POST with a JSON body from stdin
+    ///   pup api -X POST v2/cases/123/comment --input - << 'EOF'
+    ///   {"data":{"attributes":{"comment":"Hello"},"type":"case"}}
+    ///   EOF
+    ///
+    ///   # POST with key=value fields (no file needed)
+    ///   pup api -X POST v2/tags/hosts/myhost -F host=myhost -f source=web
+    ///
+    ///   # GET with query parameters
+    ///   pup api v2/monitors -F tags=env:prod -F page=0
+    ///
+    ///   # Show response status and headers
+    ///   pup api -i v2/monitors
+    ///
+    ///   # Verbose: show request and response details
+    ///   pup api --verbose v2/monitors
+    #[command(verbatim_doc_comment)]
+    Api {
+        /// API endpoint path (e.g. v2/monitors or /api/v2/monitors)
+        endpoint: String,
+        /// HTTP method (default: GET)
+        #[arg(short = 'X', long, default_value = "GET", value_name = "METHOD")]
+        method: String,
+        /// Add a typed field: int, bool, null, or string (repeatable).
+        /// For POST/PUT/PATCH: JSON body field. For GET/DELETE: query parameter.
+        #[arg(short = 'F', long, value_name = "KEY=VALUE")]
+        field: Vec<String>,
+        /// Add a custom HTTP request header (repeatable)
+        #[arg(short = 'H', long, value_name = "KEY:VALUE")]
+        header: Vec<String>,
+        /// Include HTTP response status line and headers in output
+        #[arg(short = 'i', long)]
+        include: bool,
+        /// Read request body from file, or use "-" for stdin
+        #[arg(long, value_name = "FILE")]
+        input: Option<String>,
+        /// Add a raw string field, no type coercion (repeatable).
+        /// For POST/PUT/PATCH: JSON body field. For GET/DELETE: query parameter.
+        #[arg(short = 'f', long = "raw-field", value_name = "KEY=VALUE")]
+        raw_field: Vec<String>,
+        /// Do not print the response body
+        #[arg(long)]
+        silent: bool,
+        /// Show full request URL and response headers
+        #[arg(long)]
+        verbose: bool,
+    },
     /// Manage API keys
     ///
     /// Manage Datadog API keys.
@@ -11408,6 +11469,33 @@ async fn main_inner() -> anyhow::Result<()> {
             AliasActions::Delete { names } => commands::alias::delete(names)?,
             AliasActions::Import { file } => commands::alias::import(&file)?,
         },
+        // --- Api ---
+        Commands::Api {
+            endpoint,
+            method,
+            field,
+            header,
+            include,
+            input,
+            raw_field,
+            silent,
+            verbose,
+        } => {
+            cfg.validate_auth()?;
+            commands::api::run(
+                &cfg,
+                &endpoint,
+                &method,
+                &field,
+                &header,
+                &raw_field,
+                input.as_deref(),
+                include,
+                silent,
+                verbose,
+            )
+            .await?;
+        }
         // --- Skills ---
         Commands::Skills { action } => match action {
             SkillsActions::List { entry_type } => commands::skills::list(&cfg, entry_type)?,
