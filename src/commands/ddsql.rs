@@ -96,10 +96,13 @@ fn extract_query_status(resp: &Value) -> Result<Option<String>> {
 /// Build a polling request for an in-progress async query.
 ///
 /// Endpoint: POST /api/unstable/advanced/query/tabular/fetch
-/// Same shape as the originating request, but with an additional `query_id` in attributes.
+/// Same shape as the originating request, but with `query_id` added and the type
+/// changed to `advanced_query_fetch_request` (the fetch endpoint rejects the
+/// original `analysis_workspace_query_request` type).
 fn build_fetch_request(base_body: &Value, query_id: &str) -> Value {
     let mut fetch_body = base_body.clone();
     fetch_body["data"]["attributes"]["query_id"] = json!(query_id);
+    fetch_body["data"]["type"] = json!("advanced_query_fetch_request");
     fetch_body
 }
 
@@ -388,6 +391,8 @@ mod tests {
         let base = build_advanced_table_request("SELECT 1", "1h", "now", None).unwrap();
         let fetch = build_fetch_request(&base, "qid-456");
         assert_eq!(fetch["data"]["attributes"]["query_id"], "qid-456");
+        // Type must change to advanced_query_fetch_request for the fetch endpoint.
+        assert_eq!(fetch["data"]["type"], "advanced_query_fetch_request");
         // Original fields are preserved.
         assert_eq!(
             fetch["data"]["attributes"]["datasets"][0]["query"]["sql_query"],
