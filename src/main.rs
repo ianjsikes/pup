@@ -7816,8 +7816,7 @@ enum AuthActions {
         #[arg(long, value_name = "SITE")]
         site: Option<String>,
     },
-    /// Print access token (debug builds only)
-    #[cfg(debug_assertions)]
+    /// Print access token
     Token,
     /// Refresh access token
     Refresh,
@@ -11619,7 +11618,6 @@ async fn main_inner() -> anyhow::Result<()> {
                 }
                 commands::auth::status(&cfg)?
             }
-            #[cfg(debug_assertions)]
             AuthActions::Token => commands::auth::token(&cfg)?,
             AuthActions::Refresh => commands::auth::refresh(&cfg).await?,
             AuthActions::List => commands::auth::list(&cfg)?,
