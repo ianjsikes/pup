@@ -136,7 +136,9 @@ pub async fn findings_analyze(
             if msg.contains("400") || msg.contains("Bad Request") {
                 eprintln!("Error: Invalid query. Check that:");
                 eprintln!("  - Column names in ARRAY use @ prefix (e.g., @severity, not severity)");
-                eprintln!("  - AS clause types are valid (VARCHAR, BIGINT, DECIMAL, BOOLEAN, TIMESTAMP)");
+                eprintln!(
+                    "  - AS clause types are valid (VARCHAR, BIGINT, DECIMAL, BOOLEAN, TIMESTAMP)"
+                );
                 eprintln!("  - Column count in ARRAY matches the AS clause");
                 eprintln!("  - Field names are valid — common fields:");
                 eprintln!("      @severity  @status  @finding_type  @rule.name  @title");
