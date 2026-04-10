@@ -86,17 +86,17 @@ See [docs/COMMANDS.md](docs/COMMANDS.md) for detailed command reference.
 </details>
 
 <details>
-<summary><b>🔒 Security & Compliance (4/8 implemented)</b></summary>
+<summary><b>🔒 Security & Compliance (6/8 implemented)</b></summary>
 
 | API Domain | Status | Pup Commands | Notes |
 |------------|--------|--------------|-------|
 | Security Monitoring | ✅ | `security rules`, `security signals`, `security findings`, `security content-packs`, `security risk-scores` | Rules, signals, findings, content packs, entity risk scores |
+| Cloud Security | ✅ | `security findings analyze`, `security findings schema` | DDSQL analytics for misconfigurations, identity risks, and all Cloud Security finding types |
+| Application Security | ✅ | `security findings analyze`, `security asm-custom-rules`, `security asm-exclusions` | API findings via DDSQL, WAF custom rules and exclusion filters |
 | Static Analysis | ✅ | `static-analysis ast`, `static-analysis custom-rulesets`, `static-analysis sca`, `static-analysis coverage` | Code security analysis |
 | Audit Logs | ✅ | `audit-logs list`, `audit-logs search` | Full audit log search and listing |
 | Data Governance | ✅ | `data-governance scanner-rules list` | Sensitive data scanner rules |
-| Application Security | ❌ | - | Not yet implemented |
 | CSM Threats | ❌ | - | Not yet implemented |
-| Cloud Security (CSPM) | ❌ | - | Not yet implemented |
 | Sensitive Data Scanner | ❌ | - | Not yet implemented |
 
 </details>

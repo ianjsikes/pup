@@ -132,9 +132,26 @@ pub async fn findings_analyze(
     match ddsql::execute_ddsql_query(cfg, query, from, to, Some(limit as i32)).await {
         Ok(rows) => formatter::output(cfg, &rows),
         Err(e) => {
-            eprintln!(
-                "Hint: run `pup security findings schema` to see available fields and types for dd.security_findings()."
-            );
+            let msg = e.to_string();
+            if msg.contains("400") || msg.contains("Bad Request") {
+                eprintln!("Error: Invalid query. Check that:");
+                eprintln!("  - Column names in ARRAY use @ prefix (e.g., @severity, not severity)");
+                eprintln!(
+                    "  - AS clause types are valid (VARCHAR, BIGINT, DECIMAL, BOOLEAN, TIMESTAMP)"
+                );
+                eprintln!("  - Column count in ARRAY matches the AS clause");
+                eprintln!("  - Field names are valid — common fields:");
+                eprintln!("      @severity  @status  @finding_type  @rule.name  @title");
+                eprintln!("      @resource_name  @resource_type  @compliance.evaluation");
+                eprintln!("      @severity_details.adjusted.score  @risk.is_production");
+                eprintln!("  - Run `pup security findings schema` for the full field reference");
+                eprintln!();
+                eprintln!("Raw API error: {msg}");
+            } else {
+                eprintln!(
+                    "Hint: run `pup security findings schema` to see available fields and types."
+                );
+            }
             Err(e)
         }
     }

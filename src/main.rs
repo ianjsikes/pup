@@ -2087,21 +2087,40 @@ enum Commands {
     ///
     /// Manage security monitoring rules, signals, and findings.
     ///
-    /// CAPABILITIES:
-    ///   • List and manage security monitoring rules
-    ///   • View security signals and findings
-    ///   • Configure suppression rules
-    ///   • Manage security filters
+    /// CONCEPTS:
+    ///   Signals — Real-time security detections (e.g., CWS catching a suspicious
+    ///   DNS lookup). They are time-series events. Use `pup security signals`.
+    ///
+    ///   Findings — Point-in-time posture assessments (misconfigurations,
+    ///   vulnerabilities, secrets, identity risks). They represent current state.
+    ///   Use `pup security findings`.
+    ///
+    /// COMMANDS:
+    ///   Query & Investigate:
+    ///     findings           Search and analyze security findings (posture, vulns, misconfigs)
+    ///     signals            Search and analyze real-time security detections
+    ///     risk-scores        List entity risk scores
+    ///
+    ///   Configure:
+    ///     rules              Manage detection rules
+    ///     suppressions       Manage suppression rules
+    ///     content-packs      Manage security content packs
+    ///     asm-custom-rules   Manage ASM WAF custom rules
+    ///     asm-exclusions     Manage ASM WAF exclusion filters
+    ///     restriction-policies  Manage resource restriction policies
     ///
     /// EXAMPLES:
-    ///   # List security monitoring rules
-    ///   pup security rules list
-    ///
-    ///   # Get rule details
-    ///   pup security rules get rule-id
+    ///   # Analyze open findings by severity
+    ///   pup security findings analyze --query "SELECT severity, COUNT(*) as cnt
+    ///     FROM dd.security_findings(columns => ARRAY['@severity'],
+    ///     filter => '@status:open') AS (severity VARCHAR)
+    ///     GROUP BY severity ORDER BY cnt DESC"
     ///
     ///   # List security signals
-    ///   pup security signals list
+    ///   pup security signals list --query "@status:open"
+    ///
+    ///   # List detection rules
+    ///   pup security rules list
     ///
     /// AUTHENTICATION:
     ///   Requires either OAuth2 authentication or API keys.
@@ -4113,37 +4132,40 @@ enum BitsActions {
 // ---- Security ----
 #[derive(Subcommand)]
 enum SecurityActions {
-    /// Manage security rules
-    Rules {
+    // -- Query & Investigate --
+    /// Search and analyze security findings (posture, vulnerabilities, misconfigs)
+    Findings {
         #[command(subcommand)]
-        action: SecurityRuleActions,
+        action: SecurityFindingActions,
     },
-    /// Manage security signals
+    /// Search and analyze real-time security detections
     Signals {
         #[command(subcommand)]
         action: SecuritySignalActions,
     },
-    /// Manage security findings
-    Findings {
+    /// List entity risk scores
+    #[command(name = "risk-scores")]
+    RiskScores {
         #[command(subcommand)]
-        action: SecurityFindingActions,
+        action: SecurityRiskScoreActions,
+    },
+
+    // -- Configure --
+    /// Manage detection rules
+    Rules {
+        #[command(subcommand)]
+        action: SecurityRuleActions,
+    },
+    /// Manage suppression rules
+    Suppressions {
+        #[command(subcommand)]
+        action: SecuritySuppressionActions,
     },
     /// Manage security content packs
     #[command(name = "content-packs")]
     ContentPacks {
         #[command(subcommand)]
         action: SecurityContentPackActions,
-    },
-    /// Manage entity risk scores
-    #[command(name = "risk-scores")]
-    RiskScores {
-        #[command(subcommand)]
-        action: SecurityRiskScoreActions,
-    },
-    /// Manage security suppression rules
-    Suppressions {
-        #[command(subcommand)]
-        action: SecuritySuppressionActions,
     },
     /// Manage ASM WAF custom rules
     #[command(name = "asm-custom-rules")]
@@ -4157,7 +4179,7 @@ enum SecurityActions {
         #[command(subcommand)]
         action: AsmExclusionActions,
     },
-    /// Manage restriction policies
+    /// Manage resource restriction policies
     #[command(name = "restriction-policies")]
     RestrictionPolicies {
         #[command(subcommand)]
@@ -4277,7 +4299,7 @@ enum SecurityFindingActions {
     /// Analyze security findings using DDSQL. Workflow: 1) Run `pup security findings schema` to get fields, 2) Query with SQL. Function: dd.security_findings(columns => ARRAY['@field', ...], filter => '@field:value', finding_types => ARRAY['type', ...]). AS clause types: VARCHAR, BIGINT, DECIMAL, BOOLEAN, TIMESTAMP. Notes: 'columns' ordering MUST match the AS clause. Use -@compliance.evaluation:pass filter to exclude passing findings. Prefer ordering by @severity_details.adjusted.score. Use LIMIT to reduce output. Example: SELECT rule_name, finding_type, severity, count(*) as cnt FROM dd.security_findings(columns => ARRAY['@rule.name', '@finding_type', '@severity'], filter => '@status:open @severity:(high OR critical)') AS (rule_name VARCHAR, finding_type VARCHAR, severity VARCHAR) GROUP BY rule_name, finding_type, severity ORDER BY cnt DESC LIMIT 100
     #[command(
         name = "analyze",
-        long_about = "Analyze security findings using DDSQL with dd.security_findings().\n\nWorkflow: 1) Call `pup security findings schema` first to get available fields\n         2) Use this command to query with SQL\n\nQueries live data from the last 24 hours using flexible SQL aggregations, filtering, and grouping.\n\nFunction signature:\n  dd.security_findings(\n    columns => ARRAY['@field1', '@field2', ...],\n    filter => '@field:value',\n    finding_types => ARRAY['library_vulnerability', ...]\n  )\n\nThe AS clause must declare column names and DDSQL types:\n  AS (col1 VARCHAR, col2 BIGINT, ...)\n\nAvailable types: VARCHAR, BIGINT, DECIMAL, BOOLEAN, TIMESTAMP\n\nIMPORTANT notes:\n  - 'columns =>' ordering MUST match the AS clause column ordering\n  - If querying all findings or misconfigurations, use -@compliance.evaluation:pass filter to exclude passing findings\n  - Prefer ordering by severity score (@severity_details.adjusted.score) when relevant\n  - Use LIMIT to reduce context\n\nExample queries:\n\n  Top failing rules across finding types:\n    --query \"SELECT rule_name, finding_type, severity, count(*) as affected_resources\n      FROM dd.security_findings(\n        columns => ARRAY['@rule.name', '@finding_type', '@severity'],\n        filter => '@status:open @severity:(high OR critical)'\n      ) AS (rule_name VARCHAR, finding_type VARCHAR, severity VARCHAR)\n      GROUP BY rule_name, finding_type, severity\n      ORDER BY affected_resources DESC LIMIT 100\"\n\n  Open library vulnerabilities with exploits:\n    --query \"SELECT title, resource_name, severity\n      FROM dd.security_findings(\n        columns => ARRAY['@title', '@resource_name', '@severity'],\n        filter => '@status:open @risk.has_exploit_available:true',\n        finding_types => ARRAY['library_vulnerability']\n      ) AS (title VARCHAR, resource_name VARCHAR, severity VARCHAR)\n      LIMIT 25\""
+        long_about = "Analyze security findings using DDSQL with dd.security_findings().\n\nWorkflow: 1) Call `pup security findings schema` first to get available fields\n         2) Use this command to query with SQL\n\nQueries the current state of all security findings using flexible SQL aggregations,\nfiltering, and grouping.\n\nFunction signature:\n  dd.security_findings(\n    columns => ARRAY['@field1', '@field2', ...],\n    filter  => '@field:value',\n    finding_types => ARRAY['library_vulnerability', ...]\n  )\n\nThe AS clause must declare column names and DDSQL types:\n  AS (col1 VARCHAR, col2 BIGINT, ...)\n\nAvailable types: VARCHAR, BIGINT, DECIMAL, BOOLEAN, TIMESTAMP\n\nQuery structure (filter vs WHERE):\n  - filter => '...'  : Datadog query syntax, pushed down to the backing store.\n                        Use @ prefix: @status:open @severity:(high OR critical)\n                        Supports negation: -@compliance.evaluation:pass\n  - WHERE clause     : Standard SQL, operates on the aliases in your AS clause.\n                        No @ prefix: WHERE severity = 'critical'\n                        Simple conditions are pushed down automatically.\n  - columns => ARRAY : Fields to select. Use @ prefix. Order must match AS clause.\n\nCommon fields (use with @ prefix in columns/filter):\n\n  Filtering & Grouping\n    @severity              string   critical, high, medium, low, info, none, unknown\n    @status                string   open, muted, auto_closed\n    @finding_type          string   misconfiguration, host_and_container_vulnerability,\n                                    library_vulnerability, static_code_vulnerability,\n                                    secret, identity_risk, attack_path, ...\n    @resource_type         string   Type of affected resource\n    @rule.name             string   Name of the detection rule\n\n  Identification\n    @title                 string   Human-readable finding title\n    @resource_name         string   Name of the affected resource\n    @resource_id           string   Unique resource identifier\n\n  Risk Prioritization\n    @is_in_security_inbox                boolean  In the Security Inbox\n    @severity_details.adjusted.score     number   CVSS-scale adjusted score\n    @risk.is_publicly_accessible         boolean  Resource is internet-facing\n    @risk.is_production                  boolean  Resource is in production\n    @risk.has_exploit_available          boolean  Known exploits exist\n    @risk.has_high_exploitability_chance  boolean  EPSS score > 1%\n    @risk.is_exposed_to_attacks          boolean  Attacks already detected\n    @risk.has_sensitive_data             boolean  Resource has sensitive data\n\n  Compliance\n    @compliance.evaluation   string   pass or fail\n\n  Scoping\n    @cloud_resource.cloud_provider   string   aws, azure, gcp, oci\n    @cloud_resource.account          string   Cloud account/subscription/project\n    @cloud_resource.region           string   Cloud region\n    @service.name                    string   Service name\n    @host.name                       string   Host name\n\n  Time\n    @first_seen_at           integer  First detection (ms UTC)\n    @last_seen_at            integer  Most recent detection (ms UTC)\n\n  Run `pup security findings schema` for the full field reference.\n\nIMPORTANT notes:\n  - 'columns =>' ordering MUST match the AS clause column ordering\n  - If querying all findings or misconfigurations, use -@compliance.evaluation:pass\n    filter to exclude passing findings\n  - Prefer ordering by severity score (@severity_details.adjusted.score) when relevant\n  - Use LIMIT to reduce context\n\nExample queries:\n\n  # Open findings by severity\n  pup security findings analyze --query \"\n    SELECT severity, COUNT(*) as cnt\n    FROM dd.security_findings(\n      columns => ARRAY['@severity'],\n      filter => '@status:open'\n    ) AS (severity VARCHAR)\n    GROUP BY severity ORDER BY cnt DESC\"\n\n  # Top 10 critical rules\n  pup security findings analyze --query \"\n    SELECT rule_name, COUNT(*) as cnt\n    FROM dd.security_findings(\n      columns => ARRAY['@rule.name'],\n      filter => '@status:open @severity:critical'\n    ) AS (rule_name VARCHAR)\n    GROUP BY rule_name ORDER BY cnt DESC LIMIT 10\"\n\n  # Critical findings in production with known exploits\n  pup security findings analyze --query \"\n    SELECT title, resource_name, score\n    FROM dd.security_findings(\n      columns => ARRAY['@title', '@resource_name', '@severity_details.adjusted.score'],\n      filter => '@status:open @severity:critical @risk.is_production:true @risk.has_exploit_available:true'\n    ) AS (title VARCHAR, resource_name VARCHAR, score DECIMAL)\n    ORDER BY score DESC LIMIT 20\"\n\n  # Findings by cloud account and region\n  pup security findings analyze --query \"\n    SELECT account, region, COUNT(*) as cnt\n    FROM dd.security_findings(\n      columns => ARRAY['@cloud_resource.account', '@cloud_resource.region'],\n      filter => '@status:open @severity:(high OR critical)'\n    ) AS (account VARCHAR, region VARCHAR)\n    GROUP BY account, region ORDER BY cnt DESC LIMIT 20\"\n\n  # Vulnerabilities only (exclude misconfigs, secrets, etc.)\n  pup security findings analyze --query \"\n    SELECT severity, COUNT(*) as cnt\n    FROM dd.security_findings(\n      columns => ARRAY['@severity'],\n      filter => '@status:open',\n      finding_types => ARRAY['host_and_container_vulnerability', 'library_vulnerability']\n    ) AS (severity VARCHAR)\n    GROUP BY severity ORDER BY cnt DESC\""
     )]
     Analyze {
         /// SQL query using dd.security_findings(columns => ARRAY['@field', ...], filter => '@field:value', finding_types => ARRAY['type', ...]) AS (col TYPE, ...). 'columns' ordering MUST match the AS clause. Run `pup security findings schema` to see fields. Types: VARCHAR, BIGINT, DECIMAL, BOOLEAN, TIMESTAMP
@@ -8150,8 +8172,9 @@ fn build_command_schema(cmd: &clap::Command, parent_path: &str) -> serde_json::V
     obj.insert("name".into(), serde_json::json!(name));
     obj.insert("full_path".into(), serde_json::json!(full_path));
 
-    if let Some(about) = cmd.get_about() {
-        obj.insert("description".into(), serde_json::json!(about.to_string()));
+    // Prefer long_about so agents see full context (grouping, examples, field references)
+    if let Some(desc) = cmd.get_long_about().or_else(|| cmd.get_about()) {
+        obj.insert("description".into(), serde_json::json!(desc.to_string()));
     }
 
     // Determine read_only based on command name — but only emit for leaf commands
